@@ -25,6 +25,15 @@ def inquiry(text: str, packet: dict[str, Any]) -> str | None:
     than being guessed as a physical action by an LLM.
     """
     normalized = _clean(text)
+    # A polite request containing an executable verb is still an action.
+    # In particular, do not steal "could you ask Quill" or
+    # "can I go to the hall" from the existing AI interpreter.
+    if re.match(r"^(?:can|could|would|will|may|should)\\b", normalized) and re.search(
+        r"\\b(?:go|travel|walk|move|enter|visit|ask|talk|speak|interview|question|"
+        r"examine|inspect|look at|accuse|charge)\\b",
+        normalized,
+    ):
+        return None
     view = packet["view"]
     options = packet["options"]
     current = str(view.get("place_key", ""))
