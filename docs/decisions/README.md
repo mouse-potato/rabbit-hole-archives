@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-Use short ADRs for decisions that meaningfully constrain implementation.
+These ADRs explain **why earlier decisions were made**, not requirements that must be preserved at all costs. Revisit, amend, or supersede a decision when implementation or playtesting provides better evidence. Prefer a small code change and a focused test over creating an ADR for every gameplay or UI choice.
 
 - [ADR-001 — Reusable engine and standalone game](0001-engine-and-game.md)
 - [ADR-002 — ECS-native canonical case truth](0002-ecs-native-case-truth.md)
@@ -8,6 +8,6 @@ Use short ADRs for decisions that meaningfully constrain implementation.
 - [ADR-004 — Neutral accusation verdicts](0004-neutral-accusation-verdicts.md)
 - [ADR-005 — Narration receives a packet, not the world](0005-narration-boundary.md)
 
-Status definitions: **Accepted** = team direction, subject to revisiting with evidence; **Proposed** = undecided; **Superseded** = replaced with a linked ADR.
+**Accepted** = current approach, revisitable; **Proposed** = undecided; **Superseded** = replaced or retired. A game-design choice such as accusation feedback can be changed after playtesting; its ADR captures the previous reasoning, not a permanent mandate.
 
-Record alternatives and consequences, not just the outcome. Any new assumptions about Bunnyland should be traced to code or explicitly marked as unverified.
+Only write or update an ADR when the rationale will materially help future contributors. Ground claims about Bunnyland in source or tests, and mark unverified assumptions clearly. Track actionable work in GitHub issues and PRs, not in parallel planning documents.
