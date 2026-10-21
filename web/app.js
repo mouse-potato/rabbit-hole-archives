@@ -1,55 +1,101 @@
-/* The browser sees only the restricted API's public packet. Never fetch case authoring data. */
+/* Only restricted projections and explicitly safe action options reach the browser. */
 const $ = (id) => document.getElementById(id);
-let base = "";
-const renderText = (node, value) => { node.textContent = value == null ? "" : String(value); };
-function entry(message) {
-  const item = document.createElement("li");
-  renderText(item, message);
-  $("transcript").append(item);
+let base = location.origin;
+const say = (node, value) => { node.textContent = String(value ?? ""); };
+function element(tag, text, parent) {
+  const node = document.createElement(tag);
+  say(node, text);
+  parent.append(node);
+  return node;
+}
+function entry(message) { element("li", message, $("transcript")); }
+async function act(text) {
+  entry("You: " + text);
+  $("command").disabled = true;
+  try {
+    renderPacket(await request("/api/investigation/actions", {
+      method: "POST", body: JSON.stringify({ text })
+    }));
+  } catch (error) { entry("Unable to act: " + error.message); }
+  finally { $("command").disabled = false; $("command").focus(); }
+}
+function actions(title, items, verb, parent) {
+  if (!items?.length) return;
+  element("h3", title, parent);
+  const list = document.createElement("ul");
+  parent.append(list);
+  for (const option of items) {
+    const li = document.createElement("li");
+    const button = document.createElement("button");
+    button.type = "button";
+    say(button, option.name);
+    button.addEventListener("click", () => act(verb + " " + option.key));
+    li.append(button);
+    list.append(li);
+  }
 }
 function renderPacket(packet) {
-  if (!packet || !packet.view) throw new Error("The server did not return a narration packet.");
+  if (!packet?.view) throw Error("Invalid narration packet.");
   const view = packet.view;
-  renderText($("scene"), JSON.stringify(view, null, 2));
+  const scene = $("scene");
+  scene.replaceChildren();
+  element("h3", view.case_title, scene);
+  element("p", view.solved ? "Case solved!" : "Current location: " + (view.place_name || "Unknown"), scene);
+  if (view.solved) entry("The case is solved. Well done, investigator.");
+  const options = packet.options || {};
+  actions("Explore locations", options.places || [], "go to", scene);
+  actions("Examine nearby evidence", options.evidence || [], "examine", scene);
+  actions("Question witnesses", view.witnesses?.map(w => ({
+    key: w.witness_key, name: w.name
+  })) || [], "talk to", scene);
+  actions("Accuse a suspect", options.suspects || [], "accuse", scene);
   const book = $("casebook");
   book.replaceChildren();
-  const pre = document.createElement("pre");
-  pre.style.whiteSpace = "pre-wrap";
-  pre.style.overflowWrap = "anywhere";
-  renderText(pre, JSON.stringify(view, null, 2));
-  book.append(pre);
+  element("h3", "Evidence", book);
+  if (!view.discovered.length) element("p", "No evidence recorded yet.", book);
+  for (const clue of view.discovered) {
+    element("h4", clue.label, book);
+    element("p", clue.observation, book);
+  }
+  element("h3", "Witness statements", book);
+  if (!view.heard.length) element("p", "No interviews recorded yet.", book);
+  for (const statement of view.heard) {
+    element("h4", statement.witness_key.replaceAll("-", " "), book);
+    element("p", statement.statement, book);
+    if (statement.lead_evidence_key) element("p", "Lead: " + statement.lead_evidence_key, book);
+  }
   if (packet.outcome) {
-    const outcome = packet.outcome;
-    entry([outcome.accepted ? "Action accepted" : "Action rejected", outcome.detail, outcome.observation, ...(outcome.statements || []), outcome.verdict].filter(Boolean).join("\n"));
+    const result = packet.outcome;
+    const description = [result.accepted ? "Action accepted" : "Action rejected",
+      result.detail, result.observation, ...(result.statements || []),
+      result.verdict === "solved" ? "Case solved!" : result.verdict === "unproven" ? "Accusation unproven." : ""]
+      .filter(Boolean).join("\n");
+    entry(description);
   }
 }
 async function request(path, options = {}) {
-  const response = await fetch(base + path, { ...options, headers: { "Content-Type": "application/json", ...(options.headers || {}) } });
-  if (!response.ok) throw new Error("HTTP " + response.status + ": " + (await response.text()).slice(0, 300));
+  const response = await fetch(base + path, {
+    ...options, headers: { "Content-Type": "application/json", ...(options.headers || {}) }
+  });
+  if (!response.ok) throw Error("HTTP " + response.status);
   return response.json();
 }
+$("server").value = location.origin;
 $("connect").addEventListener("click", async () => {
   base = $("server").value.trim().replace(/\/$/, "");
   $("connect").disabled = true;
   try {
-    const packet = await request("/api/investigation");
-    renderPacket(packet);
-    renderText($("status"), "Connected.");
+    renderPacket(await request("/api/investigation"));
+    say($("status"), "Connected to the investigation.");
     $("command").focus();
-  } catch (error) {
-    renderText($("status"), "Connection failed: " + error.message);
-  } finally { $("connect").disabled = false; }
+  } catch (error) { say($("status"), "Connection failed: " + error.message); }
+  finally { $("connect").disabled = false; }
 });
 $("command-form").addEventListener("submit", async (event) => {
   event.preventDefault();
-  const input = $("command");
-  const text = input.value.trim();
-  if (!text || !base) return;
-  entry("You: " + text);
-  input.disabled = true;
-  try {
-    renderPacket(await request("/api/investigation/actions", { method: "POST", body: JSON.stringify({ text }) }));
-    input.value = "";
-  } catch (error) { entry("Unable to act: " + error.message); }
-  finally { input.disabled = false; input.focus(); }
+  const text = $("command").value.trim();
+  if (!text) return;
+  $("command").value = "";
+  await act(text);
 });
+$("connect").click();
