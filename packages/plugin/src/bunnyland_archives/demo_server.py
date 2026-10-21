@@ -14,21 +14,38 @@ from threading import Lock
 from urllib.parse import urlsplit
 
 from bunnyland.core import (
-    ActionPointsComponent, CharacterComponent, ContainmentMode, Contains,
-    FocusPointsComponent, HandlerContext, IdentityComponent, InitiativeComponent,
-    LLMControllerComponent, WorldActor, container_of, spawn_entity,
+    ActionPointsComponent,
+    CharacterComponent,
+    ContainmentMode,
+    Contains,
+    FocusPointsComponent,
+    HandlerContext,
+    IdentityComponent,
+    InitiativeComponent,
+    LLMControllerComponent,
+    WorldActor,
+    container_of,
+    spawn_entity,
 )
 from bunnyland.plugins import apply_plugins
 from rabbit_hole_engine.authoring import CaseDefinition
 
-from .local_ai import LocalAI, ollama_chat_endpoint
-from .inquiry import inquiry, SCENES
-
 from . import (
-    ArchiveEvidenceComponent, ArchivePlaceComponent, ArchiveSuspectComponent,
-    InvestigatorSessionComponent, NarrationOutcome, NarrationPacket,
-    apply_handler_result, archive_plugin, build_packet, import_case, perform, resolve_intent,
+    ArchiveEvidenceComponent,
+    ArchivePlaceComponent,
+    ArchiveSuspectComponent,
+    InvestigatorSessionComponent,
+    NarrationOutcome,
+    NarrationPacket,
+    apply_handler_result,
+    archive_plugin,
+    build_packet,
+    import_case,
+    perform,
+    resolve_intent,
 )
+from .inquiry import SCENES, inquiry
+from .local_ai import LocalAI, ollama_chat_endpoint
 
 WEB_ROOT = Path(__file__).resolve().parents[4] / "web"
 CASE_PATH = Path(__file__).with_name("demo_case.json")

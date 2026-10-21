@@ -12,6 +12,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
+
 def ollama_chat_endpoint(base_url: str) -> str:
     """Validate a trusted developer-configured Ollama server base URL.
 
