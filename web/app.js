@@ -9,6 +9,7 @@ const element = (tag, text, parent) => {
 };
 let busy = false;
 let solvedAnnounced = false;
+let caseTitle = "Rabbit Hole Archives";
 const transcript = $("transcript");
 function entry(message) {
   const item = element("li", message, transcript);
@@ -65,6 +66,7 @@ function actions(title, items, verb, parent, currentKey = "") {
 function renderPacket(packet) {
   if (!packet?.view) throw Error("Invalid investigation response.");
   const view = packet.view;
+  caseTitle = view.case_title || caseTitle;
   const scene = $("scene");
   scene.replaceChildren();
   element("p", "CASE FILE / " + view.case_title, scene).className = "eyebrow";
