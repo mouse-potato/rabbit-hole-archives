@@ -116,3 +116,19 @@ def test_demo_recognizes_interview_phrases(command: str) -> None:
     questioned = game.act(command)
     assert questioned["outcome"]["accepted"] is True
     assert len(questioned["view"]["heard"]) == 1
+
+
+def test_solved_case_rejects_subsequent_actions() -> None:
+    game = DemoGame()
+    game.act("examine receipt")
+    game.act("go to hall")
+    game.act("examine glove")
+    won = game.act("accuse ada")
+    assert won["view"]["solved"] is True
+
+    for command in ("accuse halloran", "examine glove", "go to study"):
+        rejected = game.act(command)
+        assert rejected["outcome"]["accepted"] is False
+        assert "closed" in rejected["outcome"]["detail"]
+        assert rejected["view"]["solved"] is True
+        assert rejected["view"]["place_key"] == "hall"
