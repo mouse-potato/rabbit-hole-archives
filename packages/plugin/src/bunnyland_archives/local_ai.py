@@ -1,4 +1,4 @@
-"""Optional localhost Ollama interpretation and safe, template-based narration.
+"""Optional Ollama interpretation and safe, template-based narration.
 
 No credentials or privileged ECS state cross the AI boundary. The model returns
 only a proposed public action and a narration tone, never trusted game facts.
@@ -9,7 +9,34 @@ import json
 from dataclasses import dataclass
 from typing import Any
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
+
+def ollama_chat_endpoint(base_url: str) -> str:
+    """Validate a trusted developer-configured Ollama server base URL.
+
+    This is server-side configuration, not a URL accepted from player text.
+    The API path is fixed, and URL credentials, query strings and fragments
+    are rejected to avoid accidentally leaking or misdirecting case requests.
+    """
+    base = base_url.strip().rstrip("/")
+    parsed = urlsplit(base)
+    if (
+        parsed.scheme not in ("http", "https")
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.path not in ("", "/")
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise ValueError("RHA_OLLAMA_URL must be an http(s) server origin without path or credentials")
+    try:
+        _port = parsed.port
+    except ValueError as error:
+        raise ValueError("RHA_OLLAMA_URL contains an invalid port") from error
+    return base + "/api/chat"
+
 
 _ALLOWED_ACTIONS = ("go to", "examine", "talk to", "accuse")
 _TONES = {"neutral", "curious", "tense"}
@@ -29,8 +56,8 @@ class LocalAI:
     endpoint: str = "http://127.0.0.1:11434/api/chat"
 
     def _ask(self, system: str, payload: dict[str, Any]) -> dict[str, Any] | None:
-        # Endpoint is intentionally fixed to loopback: never send cases to a
-        # remotely configurable host in this initial local-only slice.
+        # Only the trusted server operator configures the backend endpoint.
+        # Player commands and browser requests cannot choose a destination.
         body = json.dumps({
             "model": self.model,
             "stream": False,
