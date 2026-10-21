@@ -22,6 +22,7 @@ from bunnyland.plugins import apply_plugins
 from rabbit_hole_engine.authoring import CaseDefinition
 
 from .local_ai import LocalAI, ollama_chat_endpoint
+from .inquiry import inquiry, SCENES
 
 from . import (
     ArchiveEvidenceComponent, ArchivePlaceComponent, ArchiveSuspectComponent,
@@ -94,6 +95,7 @@ class DemoGame:
     ) -> dict[str, object]:
         safe = (packet or build_packet(self.actor.world, self.character)).model_dump(mode="json")
         safe["options"] = self._options()
+        safe["scene_description"] = SCENES.get(str(safe["view"]["place_key"]), "")
         safe["ai_enabled"] = self.ai is not None
         if narrate and self.ai is not None:
             safe["narration"] = self.ai.narrate(safe)
@@ -124,6 +126,15 @@ class DemoGame:
                     detail="This case is closed. Start a new investigation to act again.",
                 ),
             ))
+        # Questions and scene inspection are read-only, handled before the
+        # model can mistakenly turn an inquiry into movement or examination.
+        public = self.packet()
+        answer = inquiry(text, public)
+        if answer is not None:
+            return self.packet(NarrationPacket(
+                view=build_packet(self.actor.world, self.character).view,
+                outcome=NarrationOutcome(action="inquire", accepted=True, detail=answer),
+            ), narrate=False)
         # A model may suggest a public option but cannot execute arbitrary commands.
         # Known deterministic inputs continue to run without inference.
         # Preserve the existing reliable parser, especially button commands.
