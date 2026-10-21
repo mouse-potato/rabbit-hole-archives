@@ -1,10 +1,10 @@
-"""Test-only compatibility shim for a Bunnyland Windows checkpoint bug.
+"""Windows-only test compatibility for Bunnyland's POSIX-style checkpoint fsync.
 
-Pinned Bunnyland opens checkpoint files as "rb" before os.fsync(). Windows
-requires a writable descriptor for this operation (OSError: [Errno 9]).
-Keep real fsync and real Bunnyland save/load semantics in the tests; only
-the file open mode changes, and only on Windows. This does NOT repair the
-upstream persistence implementation for application runtime use.
+Pinned Bunnyland opens file descriptors read-only before fsync, and attempts
+os.open() on directories. Both fail on Windows. The pytest override changes
+only these platform-specific durability steps: it retains real file fsync
+and leaves the world serialization, checkpoint replacement, and reload
+logic untouched. It does not make production persistence Windows-safe.
 """
 
 from __future__ import annotations
@@ -27,4 +27,11 @@ def windows_bunnyland_checkpoint_fsync(monkeypatch: pytest.MonkeyPatch) -> None:
         with path.open("r+b") as handle:
             os.fsync(handle.fileno())
 
+    def skip_unsupported_directory_fsync(path: Path) -> None:
+        # POSIX permits opening a directory for fsync; Python's ordinary
+        # Windows os.open() does not. Preserve file sync and real save/load
+        # behavior, but skip this unsupported durability operation in tests.
+        assert path.is_dir()
+
     monkeypatch.setattr(persistence, "_fsync_file", fsync_with_writable_handle)
+    monkeypatch.setattr(persistence, "_fsync_directory", skip_unsupported_directory_fsync)
