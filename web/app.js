@@ -30,9 +30,12 @@ async function act(text) {
   $("scene").querySelectorAll("button").forEach(button => { button.disabled = true; });
   entry("You: " + text);
   try {
-    renderPacket(await request("/api/investigation/actions", {
+    const packet = await request("/api/investigation/actions", {
       method: "POST", body: JSON.stringify({ text })
-    }));
+    });
+    // Finish the pending state before rendering the replacement action buttons.
+    busy = false;
+    renderPacket(packet);
   } catch (error) {
     entry("Unable to act: " + error.message);
   } finally {
