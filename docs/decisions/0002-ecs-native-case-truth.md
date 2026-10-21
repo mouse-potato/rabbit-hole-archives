@@ -11,7 +11,7 @@ The game requires a fixed history and solution alongside mutable discoveries and
 
 Use Bunnyland ECS as the single authoritative runtime representation of canonical case facts and mutable investigation state. Structured case files can initialize ECS but will not operate as a competing runtime truth service.
 
-The Game Master is a non-authoritative consumer of scoped projections and a requester of validated actions.
+The Narrator is a non-authoritative consumer of scoped projections and a requester of validated actions.
 
 ## Consequences
 
