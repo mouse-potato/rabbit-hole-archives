@@ -6,6 +6,7 @@ This is a development server, not a production multiuser service.
 from __future__ import annotations
 
 import json
+import re
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Lock
@@ -91,24 +92,49 @@ class DemoGame:
                 view=build_packet(self.actor.world, self.character).view,
                 outcome=NarrationOutcome(action="", accepted=False, detail="Command is too long."),
             ))
-        normalized = text.strip().lower()
-        if normalized.startswith("go to ") or normalized.startswith("move to "):
-            place_key = normalized.split(" to ", 1)[1].strip().replace(" ", "-")
+        normalized = re.sub(r"[^a-z0-9\\s-]", " ", text.lower())
+        normalized = " ".join(normalized.split())
+        movement = re.fullmatch(
+            r"(?:go to|move to|travel to|go|move|travel|enter|visit) (.+)",
+            normalized,
+        )
+        if movement:
+            destination = re.sub(r"^(?:the|a|an) ", "", movement.group(1))
             places = {
                 entity.get_component(ArchivePlaceComponent).place_key: entity
-                for entity in self.actor.world.query().with_all([ArchivePlaceComponent]).execute_entities()
+                for entity in self.actor.world.query()
+                .with_all([ArchivePlaceComponent]).execute_entities()
             }
-            if place_key not in places:
-                outcome = NarrationOutcome(action="move", accepted=False, detail="Unknown location.")
+            matches = [
+                entity for key, entity in places.items()
+                if destination in {
+                    key.replace("-", " "),
+                    entity.get_component(ArchivePlaceComponent).name.lower().removeprefix("the "),
+                }
+            ]
+            if len(matches) != 1:
+                outcome = NarrationOutcome(
+                    action="move", accepted=False,
+                    detail="Unknown location." if not matches else "Ambiguous location.",
+                )
             else:
+                target = matches[0]
                 world = self.actor.world
                 current = container_of(world.get_entity(self.character))
-                if current is not None:
-                    world.get_entity(current).remove_relationship(Contains, self.character)
-                places[place_key].add_relationship(
-                    Contains(mode=ContainmentMode.ROOM_CONTENT), self.character
-                )
-                outcome = NarrationOutcome(action="move", accepted=True, detail="You enter " + places[place_key].get_component(ArchivePlaceComponent).name + ".")
+                if current == target.id:
+                    outcome = NarrationOutcome(
+                        action="move", accepted=True, detail="You are already here.",
+                    )
+                else:
+                    if current is not None:
+                        world.get_entity(current).remove_relationship(Contains, self.character)
+                    target.add_relationship(
+                        Contains(mode=ContainmentMode.ROOM_CONTENT), self.character
+                    )
+                    outcome = NarrationOutcome(
+                        action="move", accepted=True,
+                        detail="You enter " + target.get_component(ArchivePlaceComponent).name + ".",
+                    )
             return self.packet(NarrationPacket(
                 view=build_packet(self.actor.world, self.character).view, outcome=outcome
             ))
