@@ -11,6 +11,7 @@ import re
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Lock
+from typing import Any
 from urllib.parse import urlsplit
 
 from bunnyland.core import (
@@ -87,29 +88,29 @@ class DemoGame:
         self.character = character.id
         self.controller = controller.id
 
-    def _options(self) -> dict[str, object]:
+    def _options(self) -> dict[str, Any]:
         world = self.actor.world
         room = container_of(world.get_entity(self.character))
-        place_options = []
-        evidence_options = []
-        suspects = []
+        place_options: list[dict[str, str]] = []
+        evidence_options: list[dict[str, str]] = []
+        suspects: list[dict[str, str]] = []
         for entity in world.query().with_all([ArchivePlaceComponent]).execute_entities():
-            item = entity.get_component(ArchivePlaceComponent)
-            place_options.append({"key": item.place_key, "name": item.name})
+            place = entity.get_component(ArchivePlaceComponent)
+            place_options.append({"key": place.place_key, "name": place.name})
         for entity in world.query().with_all([ArchiveEvidenceComponent]).execute_entities():
-            item = entity.get_component(ArchiveEvidenceComponent)
+            evidence = entity.get_component(ArchiveEvidenceComponent)
             if container_of(entity) == room:
-                evidence_options.append({"key": item.evidence_key, "name": item.evidence_key.replace("-", " ").title()})
+                evidence_options.append({"key": evidence.evidence_key, "name": evidence.evidence_key.replace("-", " ").title()})
         for entity in world.query().with_all([ArchiveSuspectComponent]).execute_entities():
-            item = entity.get_component(ArchiveSuspectComponent)
-            suspects.append({"key": item.suspect_key, "name": item.name})
+            suspect = entity.get_component(ArchiveSuspectComponent)
+            suspects.append({"key": suspect.suspect_key, "name": suspect.name})
         return {"places": sorted(place_options, key=lambda x: x["key"]),
                 "evidence": sorted(evidence_options, key=lambda x: x["key"]),
                 "suspects": sorted(suspects, key=lambda x: x["key"])}
 
     def packet(
         self, packet: NarrationPacket | None = None, *, narrate: bool = False,
-    ) -> dict[str, object]:
+    ) -> dict[str, Any]:
         safe = (packet or build_packet(self.actor.world, self.character)).model_dump(mode="json")
         safe["options"] = self._options()
         safe["scene_description"] = SCENES.get(str(safe["view"]["place_key"]), "")
@@ -118,7 +119,7 @@ class DemoGame:
             safe["narration"] = self.ai.narrate(safe)
         return safe
 
-    def _ai_options(self) -> dict[str, object]:
+    def _ai_options(self) -> dict[str, Any]:
         options = self._options()
         view = build_packet(self.actor.world, self.character).view
         options["witnesses"] = [
@@ -127,7 +128,7 @@ class DemoGame:
         ]
         return options
 
-    def act(self, text: str) -> dict[str, object]:
+    def act(self, text: str) -> dict[str, Any]:
         if len(text) > 300:
             return self.packet(NarrationPacket(
                 view=build_packet(self.actor.world, self.character).view,
