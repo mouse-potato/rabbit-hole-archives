@@ -18,6 +18,8 @@ import pytest
 
 @pytest.fixture(autouse=True)
 def windows_bunnyland_checkpoint_fsync(monkeypatch: pytest.MonkeyPatch) -> None:
+    # CI and unit tests must stay LLM-free even if a developer enabled Ollama.
+    monkeypatch.delenv("RHA_OLLAMA_MODEL", raising=False)
     if sys.platform != "win32":
         return
 
