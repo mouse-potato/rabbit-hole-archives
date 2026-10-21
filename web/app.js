@@ -1,55 +1,169 @@
-/* The browser sees only the restricted API's public packet. Never fetch case authoring data. */
+/* The browser receives only public investigation packets, never the case solution. */
 const $ = (id) => document.getElementById(id);
-let base = "";
-const renderText = (node, value) => { node.textContent = value == null ? "" : String(value); };
+const say = (node, value) => { node.textContent = String(value ?? ""); };
+const element = (tag, text, parent) => {
+  const node = document.createElement(tag);
+  say(node, text);
+  parent.append(node);
+  return node;
+};
+let busy = false;
+let solvedAnnounced = false;
+let caseTitle = "Rabbit Hole Archives";
+const transcript = $("transcript");
 function entry(message) {
-  const item = document.createElement("li");
-  renderText(item, message);
-  $("transcript").append(item);
-}
-function renderPacket(packet) {
-  if (!packet || !packet.view) throw new Error("The server did not return a narration packet.");
-  const view = packet.view;
-  renderText($("scene"), JSON.stringify(view, null, 2));
-  const book = $("casebook");
-  book.replaceChildren();
-  const pre = document.createElement("pre");
-  pre.style.whiteSpace = "pre-wrap";
-  pre.style.overflowWrap = "anywhere";
-  renderText(pre, JSON.stringify(view, null, 2));
-  book.append(pre);
-  if (packet.outcome) {
-    const outcome = packet.outcome;
-    entry([outcome.accepted ? "Action accepted" : "Action rejected", outcome.detail, outcome.observation, ...(outcome.statements || []), outcome.verdict].filter(Boolean).join("\n"));
-  }
+  const item = element("li", message, transcript);
+  item.scrollIntoView({ block: "nearest", behavior: "auto" });
 }
 async function request(path, options = {}) {
-  const response = await fetch(base + path, { ...options, headers: { "Content-Type": "application/json", ...(options.headers || {}) } });
-  if (!response.ok) throw new Error("HTTP " + response.status + ": " + (await response.text()).slice(0, 300));
+  const response = await fetch(path, {
+    ...options,
+    headers: { "Content-Type": "application/json", ...(options.headers || {}) }
+  });
+  if (!response.ok) throw Error("HTTP " + response.status);
   return response.json();
 }
-$("connect").addEventListener("click", async () => {
-  base = $("server").value.trim().replace(/\/$/, "");
+async function act(text) {
+  if (busy) return;
+  busy = true;
+  $("command").disabled = true;
+  $("act-button").disabled = true;
+  $("scene").querySelectorAll("button").forEach(button => { button.disabled = true; });
+  entry("You: " + text);
+  try {
+    const packet = await request("/api/investigation/actions", {
+      method: "POST", body: JSON.stringify({ text })
+    });
+    // Finish the pending state before rendering the replacement action buttons.
+    busy = false;
+    renderPacket(packet);
+  } catch (error) {
+    entry("Unable to act: " + error.message);
+  } finally {
+    busy = false;
+    const closed = Boolean($("scene").querySelector(".success"));
+    $("command").disabled = closed;
+    $("act-button").disabled = closed;
+    if (!closed) $("command").focus();
+  }
+}
+function actions(title, items, verb, parent, currentKey = "") {
+  if (!items?.length) return;
+  element("h4", title, parent);
+  const list = document.createElement("ul");
+  list.className = "action-list";
+  parent.append(list);
+  for (const option of items) {
+    if (verb === "go to" && option.key === currentKey) continue;
+    const li = document.createElement("li");
+    const button = element("button", option.name, li);
+    button.type = "button";
+    button.disabled = busy;
+    button.addEventListener("click", () => act(verb + " " + option.key));
+    list.append(li);
+  }
+  if (!list.children.length) list.remove();
+}
+function renderPacket(packet) {
+  if (!packet?.view) throw Error("Invalid investigation response.");
+  const view = packet.view;
+  caseTitle = view.case_title || caseTitle;
+  const scene = $("scene");
+  scene.replaceChildren();
+  element("p", "CASE FILE / " + view.case_title, scene).className = "eyebrow";
+  element("h3", view.place_name || "Unknown location", scene);
+  const description = view.place_key === "study"
+    ? "The study is quiet, but the empty space where the seal once rested is impossible to ignore. The desk holds the house's paperwork."
+    : "Beyond the study, the hall leads toward a side door. Footsteps and a discarded possession may tell you more than anyone's testimony.";
+  element("p", description, scene);
+  const options = packet.options || {};
+  if (view.solved) {
+    element("p", "Case closed. You have assembled enough evidence to support your accusation.", scene).className = "success";
+    if (!solvedAnnounced) {
+      entry("Case closed. The evidence supports your conclusion.");
+      solvedAnnounced = true;
+    }
+  } else {
+    element("p", "Examine the scene, interview the witnesses, and find enough evidence to support your theory.", scene).className = "hint";
+  }
+  if (!view.solved) {
+    actions("Travel", options.places || [], "go to", scene, view.place_key);
+    actions("Examine", options.evidence || [], "examine", scene);
+    actions("Interview", (view.witnesses || []).map(w => ({
+      key: w.witness_key, name: w.name
+    })), "talk to", scene);
+    actions("Make an accusation", options.suspects || [], "accuse", scene);
+  }
+  $("command").disabled = Boolean(view.solved);
+  $("act-button").disabled = Boolean(view.solved);
+
+  const book = $("casebook");
+  book.replaceChildren();
+  element("h3", "Evidence", book);
+  if (!view.discovered?.length) element("p", "Nothing recorded yet.", book);
+  for (const clue of view.discovered || []) {
+    const section = document.createElement("section");
+    section.className = "casebook-entry";
+    element("h4", clue.label, section);
+    element("p", clue.observation, section);
+    book.append(section);
+  }
+  element("h3", "Witness statements", book);
+  if (!view.heard?.length) element("p", "No interviews recorded yet.", book);
+  for (const statement of view.heard || []) {
+    const section = document.createElement("section");
+    section.className = "casebook-entry";
+    element("h4", statement.witness_key.replaceAll("-", " "), section);
+    element("p", "“" + statement.statement + "”", section);
+    if (statement.lead_evidence_key) {
+      element("p", "Lead: " + statement.lead_evidence_key.replaceAll("-", " "), section).className = "hint";
+    }
+    book.append(section);
+  }
+  if (packet.outcome) {
+    const outcome = packet.outcome;
+    const result = [
+      outcome.accepted ? "Action accepted" : "Action not completed",
+      outcome.detail,
+      outcome.observation,
+      ...(outcome.statements || []),
+      outcome.verdict === "solved" ? "Accusation supported." :
+        outcome.verdict === "unproven" ? "Accusation unproven. Your evidence does not establish the case." : ""
+    ].filter(Boolean).join("\n");
+    entry(result);
+  }
+}
+async function connect() {
   $("connect").disabled = true;
   try {
-    const packet = await request("/api/investigation");
-    renderPacket(packet);
-    renderText($("status"), "Connected.");
-    $("command").focus();
+    renderPacket(await request("/api/investigation"));
+    say($("status"), "Investigation ready.");
   } catch (error) {
-    renderText($("status"), "Connection failed: " + error.message);
-  } finally { $("connect").disabled = false; }
+    say($("status"), "Unable to open investigation: " + error.message);
+  } finally {
+    $("connect").disabled = false;
+  }
+}
+$("connect").addEventListener("click", connect);
+$("export-transcript").addEventListener("click", () => {
+  const lines = Array.from(transcript.querySelectorAll("li"), (item, index) =>
+    String(index + 1) + ". " + item.textContent.trim());
+  const content = [caseTitle, "Investigation transcript", "", ...lines, ""].join("\n");
+  const file = new Blob([content], { type: "text/plain;charset=utf-8" });
+  const address = URL.createObjectURL(file);
+  const link = document.createElement("a");
+  link.href = address;
+  link.download = "rabbit-hole-archives-transcript.txt";
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(address);
 });
-$("command-form").addEventListener("submit", async (event) => {
+$("command-form").addEventListener("submit", async event => {
   event.preventDefault();
-  const input = $("command");
-  const text = input.value.trim();
-  if (!text || !base) return;
-  entry("You: " + text);
-  input.disabled = true;
-  try {
-    renderPacket(await request("/api/investigation/actions", { method: "POST", body: JSON.stringify({ text }) }));
-    input.value = "";
-  } catch (error) { entry("Unable to act: " + error.message); }
-  finally { input.disabled = false; input.focus(); }
+  const text = $("command").value.trim();
+  if (!text || busy) return;
+  $("command").value = "";
+  await act(text);
 });
+connect();

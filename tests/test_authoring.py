@@ -69,6 +69,21 @@ def test_unreachable_solution_support_rejected() -> None:
         parse(data)
 
 
+
+
+def test_v2_solution_support_can_span_rooms() -> None:
+    data = case_data()
+    data["schema_version"] = 2
+    data["locations"].append({"id": "hall", "name": "Hall"})
+    data["evidence"].append({
+        "id": "glove", "location": "hall",
+        "observation": "A glove bearing the suspect's initials.",
+        "source_event": "theft",
+    })
+    data["solution"]["supporting_evidence"] = ["receipt", "glove"]
+    case = parse(data)
+    assert tuple(case.solution.supporting_evidence) == ("receipt", "glove")
+
 def test_definition_is_immutable() -> None:
     case = parse(case_data())
     with pytest.raises(ValidationError):

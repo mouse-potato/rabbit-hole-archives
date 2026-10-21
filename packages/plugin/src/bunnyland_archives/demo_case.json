@@ -1,0 +1,89 @@
+{
+  "schema_version": 2,
+  "id": "missing_seal",
+  "title": "The Missing Seal",
+  "start_location": "study",
+  "locations": [
+    {
+      "id": "study",
+      "name": "The Study"
+    },
+    {
+      "id": "hall",
+      "name": "The Hall"
+    }
+  ],
+  "events": [
+    {
+      "id": "theft",
+      "description": "Ada signed for the seal at the desk."
+    },
+    {
+      "id": "departure",
+      "description": "Ada carried the seal away concealed in her riding glove."
+    }
+  ],
+  "suspects": [
+    {
+      "id": "ada",
+      "name": "Ada Vance"
+    },
+    {
+      "id": "halloran",
+      "name": "Mr Halloran"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "receipt",
+      "location": "study",
+      "observation": "A receipt confirms that Ada Vance signed the seal out for inspection. Halloran's signature appears as a witness, not a recipient.",
+      "source_event": "theft"
+    },
+    {
+      "id": "glove",
+      "location": "hall",
+      "observation": "Inside a damp riding glove embroidered A.V. is a torn velvet thread matching the seal's display cushion. The glove was discarded near the side door.",
+      "source_event": "departure"
+    }
+  ],
+  "witnesses": [
+    {
+      "id": "porter",
+      "name": "Porter Quill",
+      "location": "study"
+    },
+    {
+      "id": "maid",
+      "name": "Maid Rosalind",
+      "location": "hall"
+    }
+  ],
+  "testimony": [
+    {
+      "id": "porter-heard-arguing",
+      "witness": "porter",
+      "statement": "I heard Halloran and Ada arguing about the seal. Halloran insisted it should never leave the house."
+    },
+    {
+      "id": "porter-saw-receipt",
+      "witness": "porter",
+      "statement": "Both names are on the desk receipt, but only one person signed it out. Look closely.",
+      "points_to": "receipt"
+    },
+    {
+      "id": "maid-saw-glove",
+      "witness": "maid",
+      "statement": "Ada hurried through the hall with her riding gloves. I found one beside the side door after she left.",
+      "points_to": "glove"
+    }
+  ],
+  "solution": {
+    "culprit": "ada",
+    "explanation": "Ada signed the seal out and concealed it in her riding glove before leaving by the side door.",
+    "supporting_evidence": [
+      "receipt",
+      "glove"
+    ]
+  }
+}

@@ -52,6 +52,22 @@ def test_talk_intent_resolves_by_key_or_name() -> None:
     assert (by_name.command_type, by_name.target_key) == (TALK_COMMAND_TYPE, "maid")
 
 
+
+def test_unique_witness_surname_resolves() -> None:
+    scenario = build_scenario()
+    assert resolve(scenario, "talk to quill").target_key == "porter"
+    assert resolve(scenario, "interview rosalind").target_key == "maid"
+
+
+def test_shared_witness_surname_is_ambiguous() -> None:
+    data = case_data()
+    data["witnesses"].append({"id": "clerk", "name": "Mabel Quill", "location": "study"})
+    scenario = build_scenario(build_case(data))
+    resolution = resolve(scenario, "talk to quill")
+    assert resolution.status == "unresolved"
+    assert resolution.reason == "ambiguous target"
+
+
 def test_accuse_intent_resolves_to_a_suspect() -> None:
     scenario = build_scenario()
 
