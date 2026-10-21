@@ -24,8 +24,11 @@ the invariants below is a review-worthy change, not a routine bump.
 
 ### What this pin verified (source-inspected and executed)
 
-- Out-of-tree modules expose `bunnyland_plugins() -> list[Plugin]` and load via
-  `bunnyland serve --module bunnyland_archives`.
+- Out-of-tree plugins expose `bunnyland_plugins() -> list[Plugin]` and are discovered through
+  the `bunnyland.plugins` entry-point group, then selected with `bunnyland serve --plugin
+  bunnyland.archives`. There is no `--module` loader at this pin; the earlier statement that
+  the plugin loads via `bunnyland serve --module bunnyland_archives` was incorrect. The entry
+  point was added in the slice-5 HTTP spike; `docs/http-boundary.md` records the verification.
 - `Plugin`/`EcsContribution`/`CommandContribution` field names used here match
   `src/bunnyland/plugins/model.py` at this commit.
 - `apply_plugins` registers contributed components, edges, action definitions, handlers,

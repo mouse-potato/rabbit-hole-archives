@@ -23,12 +23,8 @@ uv run ruff check .    # expect All checks passed!
 uv run mypy packages/engine/src packages/plugin/src tests   # expect Success, 16 files
 ```
 
-If `uv sync` fails while building `pyyaml`, uv picked an interpreter newer than the pinned
-3.12 (Python 3.15 on Windows is the usual case): `pyyaml` publishes wheels only up to
-cp314, so anything newer falls back to a source build and needs a C toolchain. Run
-`uv sync --locked --python 3.12` instead, and delete a stale `.venv` if uv objects to
-the existing one.
-
-Load the plugin into a Bunnyland world with `bunnyland serve --module bunnyland_archives`
-(the module exposes `bunnyland_plugins()`). Case import is privileged in-process code; see
-`docs/bunnyland-integration.md` before wiring it into a server entrypoint.
+Load the plugin into a Bunnyland world with `bunnyland serve --plugin bunnyland.archives`; the
+`bunnyland.plugins` entry point in `pyproject.toml` exposes `bunnyland_plugins()`. The plugin
+is opt-in (`default_enabled=False`) and registers nothing until requested. Case import is
+privileged in-process code; see `docs/bunnyland-integration.md` before wiring it into a
+server entrypoint.
