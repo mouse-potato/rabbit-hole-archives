@@ -24,6 +24,62 @@ You can use the accessible action buttons or type commands:
 
 An unsuccessful accusation does not reveal whether the suspect was wrong or the evidence insufficient. Interviewing witnesses is optional but provides useful leads.
 
+## Optional home-server AI (Ollama)
+
+The deterministic demo needs no model. If you already run Ollama on a shared
+home server, **do not download another model** on your PC. Use the model's
+existing Ollama tag and the server's LAN hostname or IP. **Both values below are placeholders and must be replaced before running RHA:**
+
+```powershell
+$env:RHA_OLLAMA_URL = "http://YOUR_OLLAMA_SERVER_IP:11434"  # REQUIRED: replace placeholder
+$env:RHA_OLLAMA_MODEL = "YOUR_INSTALLED_OLLAMA_MODEL"  # REQUIRED: replace placeholder
+uv run python -m bunnyland_archives.demo_server
+```
+
+The default URL, if unset, is `http://127.0.0.1:11434`. The application
+appends `/api/chat`; provide **only the server origin**, not the API path.
+Only trusted server-side environment configuration can choose the endpoint.
+The browser continues talking solely to Rabbit Hole Archives on localhost.
+
+The home server must be reachable from this PC, its Ollama API must be
+listening on an interface accessible from your LAN, and any firewall must
+permit that connection. You can check connectivity from PowerShell with:
+
+```powershell
+Invoke-RestMethod "$env:RHA_OLLAMA_URL/api/tags"
+```
+
+An ordinary LAN HTTP connection is **unencrypted**, so use a trusted home
+network or an HTTPS/private-tunnel endpoint. Do not expose an unauthenticated
+Ollama API directly to the public internet. Only public investigation options
+and already-approved outcomes are sent to the configured model, not sealed
+case facts. The server does not send a browser token or game credentials.
+
+To return to offline mode, stop the demo server, then:
+
+```powershell
+Remove-Item Env:RHA_OLLAMA_MODEL
+Remove-Item Env:RHA_OLLAMA_URL
+```
+
+Freeform requests that the deterministic parser cannot resolve may be proposed
+as **one** of the currently available actions. The engine still validates
+target reachability, evidence visibility, and accusation outcomes. Invalid,
+unavailable, or malformed model responses fall back to the deterministic
+parser and can be rejected. Ordinary known commands keep their deterministic
+behavior. This is **not** freeform, topic-specific NPC dialogue yet.
+
+The local model can also select a tone for one short Narrator line; that line
+comes from fixed, trusted templates. All actual observations, testimony, and
+verdicts continue to come from the game engine. We deliberately do not allow
+the model to invent facts or produce unrestricted narrative prose in this
+first slice. Model calls are synchronous and may delay actions when the local
+model is slow or unavailable (8-second timeout per call).
+
+The AI tests use mocked model replies and run with no Ollama installation.
+Run `uv run pytest tests/test_local_ai.py` and the full existing test suite
+before merging.
+
 ## Verify locally
 
 ```sh
