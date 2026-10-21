@@ -152,6 +152,11 @@ class DemoGame:
                 view=build_packet(self.actor.world, self.character).view,
                 outcome=NarrationOutcome(action="inquire", accepted=True, detail=answer),
             ), narrate=False)
+        # Reliable, narrowly scoped offline interpretation for visible evidence.
+        # This also works when Ollama returns no usable proposal.
+        recognized = evidence_command(text, public["options"])
+        if recognized is not None:
+            text = recognized
         # A model may suggest a public option but cannot execute arbitrary commands.
         # Known deterministic inputs continue to run without inference.
         # Preserve the existing reliable parser, especially button commands.
