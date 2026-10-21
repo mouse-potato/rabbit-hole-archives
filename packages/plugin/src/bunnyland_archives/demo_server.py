@@ -21,7 +21,7 @@ from bunnyland.core import (
 from bunnyland.plugins import apply_plugins
 from rabbit_hole_engine.authoring import CaseDefinition
 
-from .local_ai import LocalAI
+from .local_ai import LocalAI, ollama_chat_endpoint
 
 from . import (
     ArchiveEvidenceComponent, ArchivePlaceComponent, ArchiveSuspectComponent,
@@ -38,7 +38,10 @@ class DemoGame:
 
     def __init__(self, ai: LocalAI | None = None) -> None:
         model = os.environ.get("RHA_OLLAMA_MODEL", "").strip()
-        self.ai = ai if ai is not None else (LocalAI(model=model) if model else None)
+        endpoint = ollama_chat_endpoint(os.environ.get("RHA_OLLAMA_URL", "http://127.0.0.1:11434"))
+        self.ai = ai if ai is not None else (
+            LocalAI(model=model, endpoint=endpoint) if model else None
+        )
         actor = WorldActor()
         apply_plugins([archive_plugin()], actor)
         case = CaseDefinition.model_validate_json(CASE_PATH.read_text(encoding="utf-8"))
