@@ -1,17 +1,18 @@
-name: Engine checks
+name: Project checks
 on: [push, pull_request]
 permissions:
   contents: read
 jobs:
-  engine:
+  checks:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
         with:
-          version: "0.9.5"
+          version: "0.12.21"
       - run: uv python install 3.12
+      # Also installs the pinned upstream Bunnyland revision from the lockfile.
       - run: uv sync --locked --python 3.12
       - run: uv run pytest
       - run: uv run ruff check .
-      - run: uv run mypy packages/engine/src tests
+      - run: uv run mypy packages/engine/src packages/plugin/src tests

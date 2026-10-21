@@ -1,6 +1,19 @@
 # Implementation plan
 
-Status: execution started 2026-10-20. Existing ADRs and technical-design.md are authoritative.
+Status: execution started 2026-10-20.
+
+Progress:
+
+- **Slice 1 complete (2026-10-20)** — engine package, strict versioned schema, validator
+  tests, LLM-free CI. PR #18.
+- **Slice 2 complete (2026-10-21)** — Bunnyland plugin wiring, privileged import,
+  deterministic examination, canonical-immutability and projection-secrecy tests against
+  the pinned upstream commit. Details in `docs/bunnyland-integration.md` and ADR-003.
+- **Slice 3 next** — persistence round-trip (save/reload of discoveries and provenance)
+  plus adversarial leakage tests. Note M1 also still owes full asynchronous tick dispatch
+  of an examination; current tests apply the handler's mutation plan directly.
+
+Existing ADRs and technical-design.md are authoritative.
 
 ## Sequence and PR boundaries
 

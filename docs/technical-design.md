@@ -1,6 +1,6 @@
 # Rabbit Hole Archives — Technical Design (Working Draft)
 
-Status: **Draft v0.1** · Updated: 2026-10-20
+Status: **Draft v0.2** · Updated: 2026-10-21
 
 > **North star:** RHA is about discovering a truth that already exists, not inventing one as you go.
 
@@ -66,6 +66,17 @@ Sources:
 - https://github.com/thalismind/bunnyland-server/blob/main/src/bunnyland/foundation/memory/plugin.py
 
 **Not yet verified:** mutation guards across all write paths; fine-grained secrecy and projection behavior; typed action handler signatures; mapping from snapshot storage to casebook; behavior under zero autonomous ticks; safe serialization of sealed facts.
+
+### Slice 2 update (2026-10-21)
+
+The plugin now pins `thalismind/bunnyland-server` at `87824d3c56a32ad91c522dbc242939b11592af05`
+and is exercised against it. See [bunnyland-integration.md](bunnyland-integration.md) for the
+pin, the verified interfaces, the remaining gaps, and ADR-003 for the trust boundary.
+Verified by execution (not only inspection): out-of-tree module loading contract, component
+and edge registration, `WorldActor.submit` acceptance of a plugin action, and the
+`can_handle`/`execute`/`MutationPlan` handler contract. Still open from the list above:
+mutation guards on other plugins' write paths, persistence serialization of sealed facts,
+and full asynchronous tick dispatch of an examination.
 
 ## Conceptual data model (proposed, subject to spike)
 
