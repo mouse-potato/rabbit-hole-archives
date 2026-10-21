@@ -106,7 +106,7 @@ class LocalAI:
             public,
         )
         tone = response.get("tone") if response else None
-        if tone not in _TONES:
+        if not isinstance(tone, str) or tone not in _TONES:
             tone = "neutral"
         accepted = bool(outcome.get("accepted"))
         return _FRAMES[tone][0 if accepted else 1]
