@@ -8,7 +8,7 @@ This document distinguishes **verified Bunnyland interfaces**, **agreed decision
 
 ## Product goals
 
-- A text-first investigation with an AI Game Master (GM) that narrates and interprets freeform player intent.
+- A text-first investigation with an AI Narrator that narrates and interprets freeform player intent.
 - A predetermined, genuinely solvable mystery: solution, historical timeline, clue provenance, and NPC knowledge are canonical.
 - Consistent character knowledge, motives, testimony, and possible deception.
 - A persistent investigator casebook containing discovered evidence, statements, leads, timelines, and player notes.
@@ -20,7 +20,7 @@ This document distinguishes **verified Bunnyland interfaces**, **agreed decision
 - Procedurally generated mysteries.
 - Autonomous NPC routines, continuously advancing time, active threats, or additional crimes.
 - Full-featured deduction simulation, elaborate UI, or a catalog of cases.
-- Letting the GM improvise new canonical evidence, change the culprit, or author world-state mutations.
+- Letting the Narrator improvise new canonical evidence, change the culprit, or author world-state mutations.
 - Reimplementing Bunnyland's ECS, action dispatch, or persistence.
 
 ## Agreed architectural decisions
@@ -31,7 +31,7 @@ See [decisions](decisions/README.md).
 2. **One repository initially:** keep independently extractable engine and client packages in a monorepo; do not split prematurely.
 3. **ECS-native truth:** canonical case facts and mutable investigation state both live in Bunnyland ECS, with distinct authorization boundaries. An authored case file may bootstrap ECS, but is not a second runtime truth store.
 4. **Static, player-driven runtime:** the crime is complete at session start; no autonomous NPC changes for MVP.
-5. **GM non-authority:** the GM receives appropriately scoped projections and validated action results. It cannot directly mutate canonical facts or decide a solution.
+5. **Narrator non-authority:** the Narrator receives appropriately scoped projections and validated action results. It cannot directly mutate canonical facts or decide a solution.
 6. **LLM-independent correctness:** mystery validation, action outcomes, knowledge scope, and persistence must be testable without model calls.
 
 ## System boundaries (proposed)
@@ -39,7 +39,7 @@ See [decisions](decisions/README.md).
 - **Case loader / validator:** imports a schema-versioned, authored case into ECS after checking structure and solvability assumptions. Does not retain a competing mutable case store.
 - **Detective ECS plugin:** models evidence, historical events, knowledge/beliefs, testimony provenance, and investigation/discovery state; registers gameplay action definitions, handlers, events, and projections.
 - **Trusted action pipeline:** converts player intent into proposed actions, validates eligibility and knowledge scope, then mutates permitted state.
-- **GM adapter:** narrates from a restricted view and action outputs. Dialogue can vary but must not introduce new authoritative facts.
+- **Narrator adapter:** narrates from a restricted view and action outputs. Dialogue can vary but must not introduce new authoritative facts.
 - **Standalone client:** text interaction and accessible, searchable casebook UI.
 - **Persistence:** rely on Bunnyland's persistence where verified; independently confirm that casebook data and canonical state round-trip correctly.
 
@@ -86,8 +86,8 @@ Prefer ECS edges for relations such as `evidence -> historical event`, `NPC -> b
 ## Trust boundaries and invariants
 
 1. At runtime, ECS holds the single authoritative case world; imported authoring files do not become competing truth.
-2. Canonical facts cannot change through gameplay or GM commands; loading/editing cases is a privileged operation.
-3. Player and GM views never expose undiscovered evidence or sealed solution facts without explicit entitlement.
+2. Canonical facts cannot change through gameplay or Narrator commands; loading/editing cases is a privileged operation.
+3. Player and Narrator views never expose undiscovered evidence or sealed solution facts without explicit entitlement.
 4. NPC assertions are records of what an NPC says/believes, **not** automatic statements of objective truth.
 5. The casebook can contain incorrect player theories without changing canonical facts.
 6. Every gameplay state change is validated and attributable to an action or explicitly defined event.
@@ -103,7 +103,7 @@ A small authored test case has one room, one discoverable clue, and one investig
 1. Load the case and initialize canonical ECS state.
 2. Issue a structured examination action via Bunnyland's action system.
 3. Validate access to the clue, return canonical observations, and record a discovery.
-4. Project a minimal, safe result for GM narration.
+4. Project a minimal, safe result for Narrator narration.
 5. Show a casebook record independently of chat history.
 6. Save/reload and verify idempotent discovery and preserved provenance.
 
@@ -112,7 +112,7 @@ A small authored test case has one room, one discoverable clue, and one investig
 - Deterministic action returns the same canonical clue facts across runs.
 - Invalid or inaccessible examinations do not change discovery state.
 - Duplicate examinations do not create duplicate casebook discoveries.
-- GM-facing results do not include sealed answers or undiscovered clues.
+- Narrator-facing results do not include sealed answers or undiscovered clues.
 - Canonical components are unchanged after normal actions.
 - Persistence round-trip retains discoveries, notes, and stable entity references.
 - These checks pass with an LLM-free test harness.
@@ -127,7 +127,7 @@ Extend to 2–3 locations, 2–3 NPCs, scripted evidence, contradictory testimon
 2. **Action & event plumbing:** determine registration contracts and how to execute without autonomous ticks.
 3. **Persistence round-trip:** confirm ECS snapshot and casebook lifecycle; version migration behavior.
 4. **Case loading / solvability:** choose schema and validate evidence provenance and solution reachability.
-5. **GM narration safety:** enforce structured action results and scoped dialogue, without trusting prompt text alone.
+5. **Narrator narration safety:** enforce structured action results and scoped dialogue, without trusting prompt text alone.
 6. **License and packaging:** assess AGPL obligations for distributed plugin/client; establish dependency version policy.
 
 ## Milestones (tentative)
