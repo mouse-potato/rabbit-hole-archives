@@ -24,6 +24,45 @@ You can use the accessible action buttons or type commands:
 
 An unsuccessful accusation does not reveal whether the suspect was wrong or the evidence insufficient. Interviewing witnesses is optional but provides useful leads.
 
+## Optional local AI (Ollama)
+
+The existing deterministic demo is still the default and requires no model.
+
+To enable experimental AI-assisted command interpretation and safe narration, start
+[Ollama](https://ollama.com/) locally, install a chat model (for example,
+`ollama pull qwen2.5:3b`), and set its name before launching the game:
+
+```powershell
+$env:RHA_OLLAMA_MODEL = "qwen2.5:3b"
+uv run python -m bunnyland_archives.demo_server
+```
+
+Ollama is contacted **only** at `http://127.0.0.1:11434/api/chat`; no
+credentials or browser-side secrets are involved. Unset the variable to
+return to deterministic mode:
+
+```powershell
+Remove-Item Env:RHA_OLLAMA_MODEL
+```
+
+Freeform requests that the deterministic parser cannot resolve may be proposed
+as **one** of the currently available actions. The engine still validates
+target reachability, evidence visibility, and accusation outcomes. Invalid,
+unavailable, or malformed model responses fall back to the deterministic
+parser and can be rejected. Ordinary known commands keep their deterministic
+behavior. This is **not** freeform, topic-specific NPC dialogue yet.
+
+The local model can also select a tone for one short Narrator line; that line
+comes from fixed, trusted templates. All actual observations, testimony, and
+verdicts continue to come from the game engine. We deliberately do not allow
+the model to invent facts or produce unrestricted narrative prose in this
+first slice. Model calls are synchronous and may delay actions when the local
+model is slow or unavailable (8-second timeout per call).
+
+The AI tests use mocked model replies and run with no Ollama installation.
+Run `uv run pytest tests/test_local_ai.py` and the full existing test suite
+before merging.
+
 ## Verify locally
 
 ```sh
