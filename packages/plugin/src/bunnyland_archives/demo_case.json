@@ -1,0 +1,88 @@
+{
+  "schema_version": 2,
+  "id": "missing_seal",
+  "title": "The Missing Seal",
+  "start_location": "study",
+  "locations": [
+    {
+      "id": "study",
+      "name": "The Study"
+    },
+    {
+      "id": "hall",
+      "name": "The Hall"
+    }
+  ],
+  "events": [
+    {
+      "id": "theft",
+      "description": "Ada signed for the seal at the desk."
+    },
+    {
+      "id": "departure",
+      "description": "Ada left the hall with a heavy glove."
+    }
+  ],
+  "suspects": [
+    {
+      "id": "ada",
+      "name": "Ada Vance"
+    },
+    {
+      "id": "halloran",
+      "name": "Mr Halloran"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "receipt",
+      "location": "study",
+      "observation": "A signed receipt for the seal, in Ada's hand.",
+      "source_event": "theft"
+    },
+    {
+      "id": "glove",
+      "location": "hall",
+      "observation": "A single glove, still damp.",
+      "source_event": "departure"
+    }
+  ],
+  "witnesses": [
+    {
+      "id": "porter",
+      "name": "Porter Quill",
+      "location": "study"
+    },
+    {
+      "id": "maid",
+      "name": "Maid Rosalind",
+      "location": "hall"
+    }
+  ],
+  "testimony": [
+    {
+      "id": "porter-heard-arguing",
+      "witness": "porter",
+      "statement": "I heard raised voices in the study before the seal went missing."
+    },
+    {
+      "id": "porter-saw-receipt",
+      "witness": "porter",
+      "statement": "There is a receipt on the desk that you should look at.",
+      "points_to": "receipt"
+    },
+    {
+      "id": "maid-saw-glove",
+      "witness": "maid",
+      "statement": "Someone dropped a glove in the hall and did not come back for it.",
+      "points_to": "glove"
+    }
+  ],
+  "solution": {
+    "culprit": "ada",
+    "explanation": "Ada signed for the seal and carried it out.",
+    "supporting_evidence": [
+      "receipt"
+    ]
+  }
+}
