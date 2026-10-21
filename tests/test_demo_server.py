@@ -94,6 +94,8 @@ def test_demo_never_serializes_sealed_case() -> None:
     "move to the hall",
     "travel to the hall",
     "visit the hall",
+    "walk into the hall",
+    "walk to hall",
     "enter hall",
     "go to The Hall!",
 ])
