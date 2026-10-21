@@ -19,6 +19,10 @@ dev = [
     "bunnyland @ git+https://github.com/thalismind/bunnyland-server@87824d3c56a32ad91c522dbc242939b11592af05",
 ]
 
+[project.entry-points."bunnyland.plugins"]
+# Discovered by bunnyland's plugin loader; opt in with `bunnyland serve --plugin bunnyland.archives`.
+archives = "bunnyland_archives:archive_plugin"
+
 [tool.hatch.build.targets.wheel]
 packages = [
     "packages/engine/src/rabbit_hole_engine",

@@ -20,6 +20,8 @@ uv run ruff check .
 uv run mypy packages/engine/src packages/plugin/src tests
 ```
 
-Load the plugin into a Bunnyland world with `bunnyland serve --module bunnyland_archives`
-(the module exposes `bunnyland_plugins()`). Case import is privileged in-process code; see
-`docs/bunnyland-integration.md` before wiring it into a server entrypoint.
+Load the plugin into a Bunnyland world with `bunnyland serve --plugin bunnyland.archives`; the
+`bunnyland.plugins` entry point in `pyproject.toml` exposes `bunnyland_plugins()`. The plugin
+is opt-in (`default_enabled=False`) and registers nothing until requested. Case import is
+privileged in-process code; see `docs/bunnyland-integration.md` before wiring it into a
+server entrypoint.

@@ -40,7 +40,7 @@ See [decisions](decisions/README.md).
 - **Detective ECS plugin:** models evidence, historical events, knowledge/beliefs, testimony provenance, and investigation/discovery state; registers gameplay action definitions, handlers, events, and projections.
 - **Trusted action pipeline:** converts player intent into proposed actions, validates eligibility and knowledge scope, then mutates permitted state.
 - **Narrator adapter:** narrates from a restricted view and action outputs. Dialogue can vary but must not introduce new authoritative facts. Implemented core: `resolve_intent` (deterministic text → proposed action), `perform` (runs the real handler, caller applies the plan), `build_packet` (restricted view + public outcome only; privileged accusation fields never cross).
-- **Standalone client:** text interaction and accessible, searchable casebook UI. Not started; the front-end stack and accessibility tooling are undecided.
+- **Standalone client:** text interaction and accessible, searchable casebook UI. Not started; the front-end stack and accessibility tooling are undecided. The HTTP boundary it will sit on is settled by the slice-5 spike in [http-boundary.md](http-boundary.md): our plugin contributes a play-zone extension router, and we host `create_app` ourselves rather than using `bunnyland serve`.
 - **Persistence:** rely on Bunnyland's persistence where verified; independently confirm that casebook data and canonical state round-trip correctly.
 
 These are conceptual module boundaries, **not** verified Python module paths or callable signatures.
@@ -49,7 +49,10 @@ These are conceptual module boundaries, **not** verified Python module paths or 
 
 At review time (2026-10-20), the public `thalismind/bunnyland-server` repository contains:
 
-- Plugin definitions registered through the `bunnyland.plugins` Python entry-point group, and out-of-tree modules loaded using `bunnyland serve --module …`.
+- Plugin definitions registered through the `bunnyland.plugins` Python entry-point group.
+  There is no module-path loader at this revision: the earlier claim that out-of-tree
+  modules load through `bunnyland serve --module …` was wrong and was corrected in the
+  slice-5 HTTP spike (see [http-boundary.md](http-boundary.md)).
 - `Plugin`, `DependencyContribution`, `EcsContribution`, `CommandContribution`, `RuntimeContribution`, and `ContentContribution` in `src/bunnyland/plugins/model.py`.
 - `EcsContribution` fields: `components`, `edges`, `systems`, `observers`.
 - `CommandContribution` fields: `command_types`, `action_handlers`, `action_definitions`, `typed_events`, `action_callbacks`.

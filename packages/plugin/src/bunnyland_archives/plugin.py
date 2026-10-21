@@ -1,7 +1,8 @@
 """Canonical ``bunnyland.archives`` plugin entrypoint.
 
-Out-of-tree Bunnyland modules are loaded with ``bunnyland serve --module
-bunnyland_archives``; the loader calls :func:`bunnyland_plugins`.
+Bunnyland discovers out-of-tree plugins through the ``bunnyland.plugins`` entry-point
+group (see ``pyproject.toml``); the loader calls :func:`bunnyland_plugins`. The plugin is
+opt-in, so a world is loaded with ``bunnyland serve --plugin bunnyland.archives``.
 """
 
 from __future__ import annotations
@@ -37,6 +38,8 @@ def archive_plugin() -> Plugin:
         name="Rabbit Hole Archives",
         version=PLUGIN_VERSION,
         placement=PluginPlacement.ADDON,
+        # Opt-in: a detective case world should not gain archive actions by default.
+        default_enabled=False,
         ecs=EcsContribution(
             components=COMPONENT_TYPES,
             edges=EDGE_TYPES,
