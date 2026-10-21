@@ -1,6 +1,7 @@
 """Local demo playthrough, invalid actions, and sealed-fact checks."""
 from __future__ import annotations
 
+import pytest
 from bunnyland_archives.demo_server import DemoGame
 
 
@@ -85,3 +86,33 @@ def test_demo_never_serializes_sealed_case() -> None:
         assert "supporting_evidence" not in text
         assert "culprit_match" not in text
         assert "missing_evidence" not in text
+
+
+@pytest.mark.parametrize("command", [
+    "go to hall",
+    "go to the hall",
+    "move to the hall",
+    "travel to the hall",
+    "visit the hall",
+    "enter hall",
+    "go to The Hall!",
+])
+def test_demo_recognizes_natural_travel_phrases(command: str) -> None:
+    game = DemoGame()
+    moved = game.act(command)
+    assert moved["outcome"]["accepted"] is True
+    assert moved["view"]["place_key"] == "hall"
+
+
+@pytest.mark.parametrize("command", [
+    "interview the maid",
+    "speak to the maid",
+    "talk to the maid",
+    "question maid",
+])
+def test_demo_recognizes_interview_phrases(command: str) -> None:
+    game = DemoGame()
+    game.act("go to the hall")
+    questioned = game.act(command)
+    assert questioned["outcome"]["accepted"] is True
+    assert len(questioned["view"]["heard"]) == 1
