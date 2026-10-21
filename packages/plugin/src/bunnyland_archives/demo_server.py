@@ -105,7 +105,7 @@ class DemoGame:
         normalized = re.sub(r"[^a-z0-9\s-]", " ", text.lower())
         normalized = " ".join(normalized.split())
         movement = re.fullmatch(
-            r"(?:go to|move to|travel to|go|move|travel|enter|visit) (.+)",
+            r"(?:go to|move to|travel to|walk into|walk to|go|move|travel|enter|visit) (.+)",
             normalized,
         )
         if movement:
