@@ -49,6 +49,14 @@ from .mechanics import (
     apply_handler_result,
     discovered_evidence_keys,
 )
+from .narrator import (
+    IntentResolution,
+    NarrationOutcome,
+    NarrationPacket,
+    build_packet,
+    perform,
+    resolve_intent,
+)
 from .plugin import PLUGIN_ID, PLUGIN_VERSION, archive_plugin, bunnyland_plugins
 from .projection import (
     ArchiveNarratorView,
@@ -99,6 +107,9 @@ __all__ = [
     "ExamineEvidenceHandler",
     "HeardTestimonyView",
     "ImportedCase",
+    "IntentResolution",
+    "NarrationOutcome",
+    "NarrationPacket",
     "InvestigatorSessionComponent",
     "ProjectionError",
     "SealedSolutionComponent",
@@ -108,10 +119,13 @@ __all__ = [
     "WitnessPresentView",
     "WitnessQuestionedEvent",
     "apply_handler_result",
+    "build_packet",
     "archive_plugin",
     "bunnyland_plugins",
     "discovered_evidence_keys",
     "import_case",
     "imported_case_keys",
     "narrator_view",
+    "perform",
+    "resolve_intent",
 ]

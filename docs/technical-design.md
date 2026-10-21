@@ -39,8 +39,8 @@ See [decisions](decisions/README.md).
 - **Case loader / validator:** imports a schema-versioned, authored case into ECS after checking structure and solvability assumptions. Does not retain a competing mutable case store.
 - **Detective ECS plugin:** models evidence, historical events, knowledge/beliefs, testimony provenance, and investigation/discovery state; registers gameplay action definitions, handlers, events, and projections.
 - **Trusted action pipeline:** converts player intent into proposed actions, validates eligibility and knowledge scope, then mutates permitted state.
-- **Narrator adapter:** narrates from a restricted view and action outputs. Dialogue can vary but must not introduce new authoritative facts.
-- **Standalone client:** text interaction and accessible, searchable casebook UI.
+- **Narrator adapter:** narrates from a restricted view and action outputs. Dialogue can vary but must not introduce new authoritative facts. Implemented core: `resolve_intent` (deterministic text → proposed action), `perform` (runs the real handler, caller applies the plan), `build_packet` (restricted view + public outcome only; privileged accusation fields never cross).
+- **Standalone client:** text interaction and accessible, searchable casebook UI. Not started; the front-end stack and accessibility tooling are undecided.
 - **Persistence:** rely on Bunnyland's persistence where verified; independently confirm that casebook data and canonical state round-trip correctly.
 
 These are conceptual module boundaries, **not** verified Python module paths or callable signatures.

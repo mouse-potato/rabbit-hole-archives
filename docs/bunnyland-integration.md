@@ -47,6 +47,14 @@ the invariants below is a review-worthy change, not a routine bump.
 - The save file itself contains sealed facts (solution and event text). It is a privileged
   artifact: do not ship it to a client or treat it as player-facing data.
 
+### Narrator boundary (slice 5 core)
+
+`narrator.build_packet` returns an `ArchiveNarratorView` plus a `NarrationOutcome` that
+carries only public fields: an observation, attributed statements, or a neutral verdict. The
+privileged `culprit_match` / `missing_evidence` fields stay in the private event, and
+`resolve_intent` maps player text to a proposed action without mutating anything. No
+LLM is involved and nothing here is authoritative narration.
+
 ### Still unverified
 
 - Full asynchronous tick dispatch of an action (tests apply the handler's plan directly,

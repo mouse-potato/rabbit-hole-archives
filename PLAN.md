@@ -18,9 +18,11 @@ Progress:
   `accuse-suspect` resolved deterministically against the sealed solution, and neutral
   public verdicts (ADR-004). 75 tests. M1 still owes full asynchronous tick dispatch of an
   action; current tests apply the handler's mutation plan directly.
-- **Slice 5 next** — standalone client consuming restricted projections plus the Narrator
-  adapter (no authoritative narration), keyboard/axe checks, documented accessibility
-  limits.
+- **Slice 5 in progress (2026-10-21)** — Narrator adapter core landed: deterministic intent
+  parsing, real-handler execution, and a narration packet that carries only the restricted
+  projection plus a public outcome. Client UI, casebook surface, and keyboard/axe checks are
+  NOT started: the client stack (browser + axe toolchain vs. framework-free text client) is a
+  design decision that belongs with the owner rather than an assumption I make alone.
 
 Existing ADRs and technical-design.md are authoritative.
 
