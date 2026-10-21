@@ -125,3 +125,49 @@ def test_existing_accusations_still_require_evidence() -> None:
     game.act("examine glove")
     solved = game.act("accuse ada")
     assert solved["view"]["solved"] is True
+
+
+@pytest.mark.parametrize("player_text", [
+    "let's look at that recipt",
+    "I'd like to look at the receipt first",
+    "can I look at the receipt?",
+    "I want to examine the receipt",
+    "receipt??????",
+    "examine receipt",
+])
+def test_playtest_phrasings_examine_visible_receipt(player_text: str) -> None:
+    game = DemoGame()
+    result = game.act(player_text)
+    assert result["outcome"]["accepted"] is True
+    assert result["outcome"]["action"] != "inquire"
+    assert "Ada Vance" in result["outcome"]["observation"]
+    assert [item["evidence_key"] for item in result["view"]["discovered"]] == ["receipt"]
+
+
+def test_inspection_fallback_rejects_unavailable_or_ambiguous_targets() -> None:
+    from bunnyland_archives.inquiry import evidence_command
+
+    game = DemoGame()
+    assert evidence_command("look at the glove", game.packet()["options"]) is None
+    assert evidence_command("look at an unknown object", game.packet()["options"]) is None
+    assert evidence_command("the receipt might be important", game.packet()["options"]) is None
+    assert evidence_command(
+        "look at recipt",
+        {"evidence": [
+            {"key": "receipt", "name": "Receipt"},
+            {"key": "recipt", "name": "Recipt"},
+        ]},
+    ) is None
+    result = game.act("I want to inspect the glove")
+    assert result["view"]["discovered"] == []
+    assert result["outcome"]["accepted"] is False
+
+
+def test_visible_evidence_phrasing_survives_model_outage(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(LocalAI, "_ask", lambda *_args: None)
+    game = DemoGame(ai=LocalAI(model="offline"))
+    result = game.act("I'd like to look at the receipt first")
+    assert result["outcome"]["accepted"] is True
+    assert len(result["view"]["discovered"]) == 1
