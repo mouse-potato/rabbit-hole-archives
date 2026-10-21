@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 from bunnyland_archives.demo_server import DemoGame
-from bunnyland_archives.local_ai import LocalAI
+from bunnyland_archives.local_ai import LocalAI, ollama_chat_endpoint
 
 
 def test_model_can_propose_only_public_options(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -106,3 +106,36 @@ def test_model_unavailable_falls_back_without_mutation(
     assert packet["outcome"]["accepted"] is False
     assert packet["view"]["discovered"] == []
     assert packet["narration"] == "That attempt gets you no further."
+
+
+@pytest.mark.parametrize(("origin", "expected"), [
+    ("http://127.0.0.1:11434", "http://127.0.0.1:11434/api/chat"),
+    ("http://192.168.1.50:11434/", "http://192.168.1.50:11434/api/chat"),
+    ("http://ollama.home:11434", "http://ollama.home:11434/api/chat"),
+    ("https://llm.home.example", "https://llm.home.example/api/chat"),
+])
+def test_trusted_remote_ollama_server_origin(origin: str, expected: str) -> None:
+    assert ollama_chat_endpoint(origin) == expected
+
+
+@pytest.mark.parametrize("origin", [
+    "http://admin:password@server:11434",
+    "http://server:11434/api/chat",
+    "http://server:11434?token=secret",
+    "http://server:11434/#private",
+    "ftp://server",
+    "http://server:invalid",
+    "",
+])
+def test_invalid_ollama_server_origin_is_rejected(origin: str) -> None:
+    with pytest.raises(ValueError, match="RHA_OLLAMA_URL"):
+        ollama_chat_endpoint(origin)
+
+
+def test_configured_remote_ollama_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RHA_OLLAMA_MODEL", "already-installed-model")
+    monkeypatch.setenv("RHA_OLLAMA_URL", "http://192.168.1.50:11434")
+    game = DemoGame()
+    assert game.ai is not None
+    assert game.ai.model == "already-installed-model"
+    assert game.ai.endpoint == "http://192.168.1.50:11434/api/chat"
