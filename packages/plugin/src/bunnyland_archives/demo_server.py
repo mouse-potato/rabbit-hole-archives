@@ -1,0 +1,195 @@
+"""Single-player localhost demo host backed by the real Bunnyland ECS.
+
+Run: uv run python -m bunnyland_archives.demo_server
+This is a development server, not a production multiuser service.
+"""
+from __future__ import annotations
+
+import json
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from threading import Lock
+from urllib.parse import urlsplit
+
+from bunnyland.core import (
+    ActionPointsComponent, CharacterComponent, ContainmentMode, Contains,
+    FocusPointsComponent, HandlerContext, IdentityComponent, InitiativeComponent,
+    LLMControllerComponent, WorldActor, container_of, spawn_entity,
+)
+from bunnyland.plugins import apply_plugins
+from rabbit_hole_engine.authoring import CaseDefinition
+
+from . import (
+    ArchiveEvidenceComponent, ArchivePlaceComponent, ArchiveSuspectComponent,
+    InvestigatorSessionComponent, NarrationOutcome, NarrationPacket,
+    apply_handler_result, archive_plugin, build_packet, import_case, perform, resolve_intent,
+)
+
+WEB_ROOT = Path(__file__).resolve().parents[4] / "web"
+CASE_PATH = Path(__file__).with_name("demo_case.json")
+
+
+class DemoGame:
+    """Own the authoritative ECS world; never serialize it to a browser."""
+
+    def __init__(self) -> None:
+        actor = WorldActor()
+        apply_plugins([archive_plugin()], actor)
+        case = CaseDefinition.model_validate_json(CASE_PATH.read_text(encoding="utf-8"))
+        imported = import_case(actor.world, case)
+        character = spawn_entity(
+            actor.world,
+            [
+                IdentityComponent(name="Vera Holt", kind="character"),
+                CharacterComponent(species="bunny"),
+                ActionPointsComponent(current=5.0, maximum=5.0, regen_per_hour=1.0),
+                FocusPointsComponent(current=3.0, maximum=3.0, regen_per_hour=0.5),
+                InitiativeComponent(score=1.0),
+                InvestigatorSessionComponent(case_key=case.id),
+            ],
+        )
+        actor.world.get_entity(imported.places[case.start_location]).add_relationship(
+            Contains(mode=ContainmentMode.ROOM_CONTENT), character.id
+        )
+        controller = spawn_entity(
+            actor.world,
+            [LLMControllerComponent(profile_name="default", model="demo-no-llm")],
+        )
+        self.generation = actor.assign_controller(character.id, controller.id)
+        self.actor = actor
+        self.character = character.id
+        self.controller = controller.id
+
+    def _options(self) -> dict[str, object]:
+        world = self.actor.world
+        room = container_of(world.get_entity(self.character))
+        place_options = []
+        evidence_options = []
+        suspects = []
+        for entity in world.query().with_all([ArchivePlaceComponent]).execute_entities():
+            item = entity.get_component(ArchivePlaceComponent)
+            place_options.append({"key": item.place_key, "name": item.name})
+        for entity in world.query().with_all([ArchiveEvidenceComponent]).execute_entities():
+            item = entity.get_component(ArchiveEvidenceComponent)
+            if container_of(entity) == room:
+                evidence_options.append({"key": item.evidence_key, "name": item.evidence_key.replace("-", " ").title()})
+        for entity in world.query().with_all([ArchiveSuspectComponent]).execute_entities():
+            item = entity.get_component(ArchiveSuspectComponent)
+            suspects.append({"key": item.suspect_key, "name": item.name})
+        return {"places": sorted(place_options, key=lambda x: x["key"]),
+                "evidence": sorted(evidence_options, key=lambda x: x["key"]),
+                "suspects": sorted(suspects, key=lambda x: x["key"])}
+
+    def packet(self, packet: NarrationPacket | None = None) -> dict[str, object]:
+        safe = (packet or build_packet(self.actor.world, self.character)).model_dump(mode="json")
+        safe["options"] = self._options()
+        return safe
+
+    def act(self, text: str) -> dict[str, object]:
+        if len(text) > 300:
+            return self.packet(NarrationPacket(
+                view=build_packet(self.actor.world, self.character).view,
+                outcome=NarrationOutcome(action="", accepted=False, detail="Command is too long."),
+            ))
+        normalized = text.strip().lower()
+        if normalized.startswith("go to ") or normalized.startswith("move to "):
+            place_key = normalized.split(" to ", 1)[1].strip().replace(" ", "-")
+            places = {
+                entity.get_component(ArchivePlaceComponent).place_key: entity
+                for entity in self.actor.world.query().with_all([ArchivePlaceComponent]).execute_entities()
+            }
+            if place_key not in places:
+                outcome = NarrationOutcome(action="move", accepted=False, detail="Unknown location.")
+            else:
+                world = self.actor.world
+                current = container_of(world.get_entity(self.character))
+                if current is not None:
+                    world.get_entity(current).remove_relationship(Contains, self.character)
+                places[place_key].add_relationship(
+                    Contains(mode=ContainmentMode.ROOM_CONTENT), self.character
+                )
+                outcome = NarrationOutcome(action="move", accepted=True, detail="You enter " + places[place_key].get_component(ArchivePlaceComponent).name + ".")
+            return self.packet(NarrationPacket(
+                view=build_packet(self.actor.world, self.character).view, outcome=outcome
+            ))
+
+        resolved = resolve_intent(self.actor.world, text)
+        if resolved.status != "resolved":
+            return self.packet(NarrationPacket(
+                view=build_packet(self.actor.world, self.character).view,
+                outcome=NarrationOutcome(action=resolved.command_type or "",
+                                         accepted=False, detail=resolved.reason),
+            ))
+        ctx = HandlerContext(world=self.actor.world, epoch=self.actor.epoch)
+        result = perform(
+            ctx, character_id=str(self.character), controller_id=str(self.controller),
+            controller_generation=self.generation, resolution=resolved,
+            apply=apply_handler_result,
+        )
+        return self.packet(build_packet(self.actor.world, self.character, result,
+                                        action=resolved.command_type or ""))
+
+
+def serve(host: str = "127.0.0.1", port: int = 8000) -> None:
+    game = DemoGame()
+    lock = Lock()
+
+    class Handler(BaseHTTPRequestHandler):
+        def _json(self, payload: dict[str, object], status: int = 200) -> None:
+            data = json.dumps(payload).encode("utf-8")
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
+        def do_GET(self) -> None:
+            path = urlsplit(self.path).path
+            if path == "/api/investigation":
+                with lock:
+                    self._json(game.packet())
+                return
+            files = {"/": "index.html", "/index.html": "index.html",
+                     "/app.js": "app.js", "/style.css": "style.css"}
+            if path not in files:
+                self.send_error(404)
+                return
+            file = WEB_ROOT / files[path]
+            if not file.is_file():
+                self.send_error(404, "Client files not found")
+                return
+            data = file.read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type", {".html": "text/html", ".js": "text/javascript",
+                                               ".css": "text/css"}[file.suffix] + "; charset=utf-8")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
+        def do_POST(self) -> None:
+            if urlsplit(self.path).path != "/api/investigation/actions":
+                self.send_error(404)
+                return
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+                if length < 1 or length > 4096:
+                    self._json({"error": "Invalid request size"}, 400)
+                    return
+                body = json.loads(self.rfile.read(length))
+                text = body.get("text")
+                if not isinstance(text, str):
+                    self._json({"error": "Expected text string"}, 400)
+                    return
+            except (ValueError, TypeError, json.JSONDecodeError):
+                self._json({"error": "Invalid JSON"}, 400)
+                return
+            with lock:
+                self._json(game.act(text))
+
+    print(f"Rabbit Hole Archives demo: http://{host}:{port}")
+    ThreadingHTTPServer((host, port), Handler).serve_forever()
+
+
+if __name__ == "__main__":
+    serve()
