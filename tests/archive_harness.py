@@ -33,6 +33,7 @@ from bunnyland.core import (
 from bunnyland.plugins import apply_plugins
 from bunnyland_archives import (
     COMMAND_TYPE,
+    PLUGIN_ID,
     ArchiveNarratorView,
     ExamineEvidenceHandler,
     ImportedCase,
@@ -210,3 +211,35 @@ def narrator_projection(scenario: ArchiveScenario) -> ArchiveNarratorView:
     from bunnyland_archives import narrator_view
 
     return narrator_view(scenario.world, scenario.character)
+
+
+def save_and_reload(scenario: ArchiveScenario) -> ArchiveScenario:
+    """Round-trip the world through Bunnyland's own save/load path.
+
+    Entity identifiers are stable across the round-trip, so the reloaded scenario
+    keeps the same case and investigator references.
+    """
+
+    import tempfile
+    from pathlib import Path
+
+    from bunnyland.persistence import WorldMeta, load_world, save_world
+    from bunnyland.plugins import PluginRegistry
+
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "world.json"
+        save_world(
+            scenario.actor,
+            path,
+            meta=WorldMeta(plugins=(PLUGIN_ID,), seed="round-trip"),
+        )
+        actor, _meta = load_world(path, registry=PluginRegistry([archive_plugin()]))
+
+    return ArchiveScenario(
+        actor=actor,
+        imported=scenario.imported,
+        case=scenario.case,
+        character=scenario.character,
+        controller=scenario.controller,
+        generation=scenario.generation,
+    )

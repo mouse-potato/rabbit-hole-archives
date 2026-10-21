@@ -1,7 +1,8 @@
 # Bunnyland integration: pinned revision and trust boundary
 
-Status: **Slice 2 (M1 ECS integration) implemented 2026-10-21.** This note records what is
-actually verified, what is only assumed, and where the trust boundary sits.
+Status: **Slices 2 (M1 ECS integration) and 3 (persistence round-trip) implemented
+2026-10-21.** This note records what is actually verified, what is only assumed, and where
+the trust boundary sits.
 
 ## Pinned upstream revision
 
@@ -33,13 +34,27 @@ the invariants below is a review-worthy change, not a routine bump.
 - Handler contract is `can_handle` / `execute` returning `HandlerResult` with a
   `MutationPlan`; applying that plan is `execute_mutation_plan`.
 
-### Still unverified (slice 3+ work)
+### Verified by slice 3 (persistence)
+
+- `save_world`/`load_world` round-trip canonical components, provenance edges,
+  investigator session state, and discovery records using Bunnyland's own serializer; there
+  is no parallel JSON implementation.
+- Entity identifiers are stable across the round-trip, so discovery → investigator and
+  discovery → evidence references survive.
+- Re-examining after reload is still idempotent, and new discoveries after reload are
+  recorded once.
+- The Narrator projection is byte-identical before and after a round-trip.
+- The save file itself contains sealed facts (solution and event text). It is a privileged
+  artifact: do not ship it to a client or treat it as player-facing data.
+
+### Still unverified
 
 - Full asynchronous tick dispatch of an examination (tests apply the handler's plan
   directly, the same level Bunnyland's own handler tests use).
-- Persistence round-trip of canonical components and discovery records.
 - Whether any other Bunnyland plugin can mutate components it does not own; the
   immutability guarantee below is enforced by our code and tests, not by ECS.
+- Player/casebook notes: no note capability exists yet, so nothing about notes round-trips.
+- Mapping from snapshot storage to a casebook surface (slice 4).
 
 ## Trust boundary
 

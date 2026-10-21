@@ -9,9 +9,14 @@ Progress:
 - **Slice 2 complete (2026-10-21)** — Bunnyland plugin wiring, privileged import,
   deterministic examination, canonical-immutability and projection-secrecy tests against
   the pinned upstream commit. Details in `docs/bunnyland-integration.md` and ADR-003.
-- **Slice 3 next** — persistence round-trip (save/reload of discoveries and provenance)
-  plus adversarial leakage tests. Note M1 also still owes full asynchronous tick dispatch
-  of an examination; current tests apply the handler's mutation plan directly.
+- **Slice 3 complete (2026-10-21)** — save/reload through Bunnyland's own persistence:
+  canonical state, provenance edges, investigator location, and discoveries all survive
+  with stable entity references; projections are identical after reload; adversarial tests
+  confirm sealed facts stay out of projections while the save file itself is privileged.
+- **Slice 4 next** — playable micro-case: witnesses, attributed testimony, leads, and a
+  validated accusation, all deterministic. Note M1 still owes full asynchronous tick
+  dispatch of an examination; current tests apply the handler's mutation plan directly,
+  and there is no player-note/casebook surface yet.
 
 Existing ADRs and technical-design.md are authoritative.
 
