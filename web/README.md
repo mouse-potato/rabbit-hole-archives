@@ -24,25 +24,42 @@ You can use the accessible action buttons or type commands:
 
 An unsuccessful accusation does not reveal whether the suspect was wrong or the evidence insufficient. Interviewing witnesses is optional but provides useful leads.
 
-## Optional local AI (Ollama)
+## Optional home-server AI (Ollama)
 
-The existing deterministic demo is still the default and requires no model.
-
-To enable experimental AI-assisted command interpretation and safe narration, start
-[Ollama](https://ollama.com/) locally, install a chat model (for example,
-`ollama pull qwen2.5:3b`), and set its name before launching the game:
+The deterministic demo needs no model. If you already run Ollama on a shared
+home server, **do not download another model** on your PC. Use the model's
+existing Ollama tag and the server's LAN hostname or IP:
 
 ```powershell
-$env:RHA_OLLAMA_MODEL = "qwen2.5:3b"
+$env:RHA_OLLAMA_URL = "http://192.168.1.50:11434"  # replace with your server address
+$env:RHA_OLLAMA_MODEL = "your-installed-model-tag"
 uv run python -m bunnyland_archives.demo_server
 ```
 
-Ollama is contacted **only** at `http://127.0.0.1:11434/api/chat`; no
-credentials or browser-side secrets are involved. Unset the variable to
-return to deterministic mode:
+The default URL, if unset, is `http://127.0.0.1:11434`. The application
+appends `/api/chat`; provide **only the server origin**, not the API path.
+Only trusted server-side environment configuration can choose the endpoint.
+The browser continues talking solely to Rabbit Hole Archives on localhost.
+
+The home server must be reachable from this PC, its Ollama API must be
+listening on an interface accessible from your LAN, and any firewall must
+permit that connection. You can check connectivity from PowerShell with:
+
+```powershell
+Invoke-RestMethod "$env:RHA_OLLAMA_URL/api/tags"
+```
+
+An ordinary LAN HTTP connection is **unencrypted**, so use a trusted home
+network or an HTTPS/private-tunnel endpoint. Do not expose an unauthenticated
+Ollama API directly to the public internet. Only public investigation options
+and already-approved outcomes are sent to the configured model, not sealed
+case facts. The server does not send a browser token or game credentials.
+
+To return to offline mode, stop the demo server, then:
 
 ```powershell
 Remove-Item Env:RHA_OLLAMA_MODEL
+Remove-Item Env:RHA_OLLAMA_URL
 ```
 
 Freeform requests that the deterministic parser cannot resolve may be proposed
