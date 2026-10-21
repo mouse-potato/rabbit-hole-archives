@@ -28,13 +28,13 @@ def evidence_command(text: str, options: dict[str, Any]) -> str | None:
     verb and a uniquely matching visible item.
     """
     normalized = _clean(text)
-    requested = bool(re.search(r"\\b(?:examine|inspect|study|look at|take a look at)\\b", normalized))
+    requested = bool(re.search(r"\b(?:examine|inspect|study|look at|take a look at)\b", normalized))
     candidates: list[str] = []
     for item in options.get("evidence", []):
         key = str(item["key"])
         aliases = {key.replace("-", " ").lower(), str(item["name"]).lower()}
         if any(
-            re.search(r"\\b" + re.escape(alias) + r"\\b", normalized)
+            re.search(r"\b" + re.escape(alias) + r"\b", normalized)
             for alias in aliases
         ):
             candidates.append(key)
@@ -58,6 +58,7 @@ def evidence_command(text: str, options: dict[str, Any]) -> str | None:
     if requested or exact_bare:
         return "examine " + key
     return None
+
 
 def inquiry(text: str, packet: dict[str, Any]) -> str | None:
     """Return an answer for supported questions; None for gameplay commands.
