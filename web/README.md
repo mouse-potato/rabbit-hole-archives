@@ -1,12 +1,27 @@
-# Slice 5 browser client (integration scaffold)
+# Play the local Rabbit Hole Archives demo
 
-Open `index.html` through a static HTTP server (for example `python -m http.server 5173 --directory web`).
+Requires Python 3.12 and uv. From the repository root:
 
-**Not yet a playable demo:** this client expects a trusted local backend to implement:
+```sh
+uv sync --locked
+uv run python -m bunnyland_archives.demo_server
+```
 
-- `GET /api/investigation` → `NarrationPacket` JSON (`view` and optional `outcome`).
-- `POST /api/investigation/actions` with `{"text":"examine ..."}` → updated `NarrationPacket`.
+Open **http://127.0.0.1:8000/** in your browser. The client connects automatically and shares the same origin as the server.
 
-The backend must own the Bunnyland world, investigator identity, command dispatch and mutation application. Never expose the authoring fixture, full ECS snapshot or sealed solution to this client. Configure CORS only for the local UI origin. The scene and casebook currently display the restricted projection as JSON pending a typed view renderer.
+## The Missing Seal
 
-This is an intentionally small integration checkpoint, not evidence that end-to-end gameplay is complete.
+You are investigating a missing seal in a two-room house. Explore the Study and Hall, question Porter Quill and Maid Rosalind, inspect the available evidence, and accuse someone once you have a theory.
+
+Use the on-screen buttons or enter commands such as:
+
+- `talk to porter`
+- `examine receipt`
+- `go to hall`
+- `talk to maid`
+- `examine glove`
+- `accuse ada`
+
+The local server uses the original micro-case and actual Bunnyland ECS components and action handlers. No LLM or API key is needed. The browser receives only a restricted investigation projection, public outcomes, and safe available-action metadata. It never receives the case's solution or save snapshots.
+
+**Development limitations:** one shared in-memory session, reset on server restart; no save/resume or individual player profiles. Movement is currently a privileged local demo operation (not a Bunnyland action-dispatch command), and handler plans run synchronously rather than through asynchronous actor ticks. The initial case is intentionally tiny. Browser end-to-end, axe-core, and manual screen-reader verification remain necessary.
