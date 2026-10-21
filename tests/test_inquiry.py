@@ -86,6 +86,24 @@ def test_model_cannot_reinterpret_scene_question_as_move(
     assert requests == []
 
 
+def test_unsupported_open_ended_question_never_becomes_accusation() -> None:
+    game = DemoGame()
+    response = game.act("tell me about Ada")
+    assert response["outcome"]["action"] == "inquire"
+    assert "does not establish" in response["outcome"]["detail"]
+    assert response["view"]["solved"] is False
+
+
+def test_normal_commands_are_not_intercepted_as_inquiries() -> None:
+    game = DemoGame()
+    examined = game.act("examine receipt")
+    assert examined["outcome"]["action"] != "inquire"
+    assert examined["outcome"]["accepted"] is True
+    moved = game.act("go to hall")
+    assert moved["outcome"]["action"] == "move"
+    assert moved["view"]["place_key"] == "hall"
+
+
 def test_existing_accusations_still_require_evidence() -> None:
     game = DemoGame()
     game.act("what's in the hall?")
