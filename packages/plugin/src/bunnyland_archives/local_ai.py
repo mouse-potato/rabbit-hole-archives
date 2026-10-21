@@ -167,6 +167,12 @@ class LocalAI:
         if outcome.get("verdict") == "solved":
             return _CLOSED[tone]
         action = str(outcome.get("action", ""))
-        if action in ("move", "examine", "talk", "accuse"):
-            return _FRAMES[action][tone]
+        if action == "move":
+            return _FRAMES["move"][tone]
+        if "examine" in action:
+            return _FRAMES["examine"][tone]
+        if "talk" in action or "witness" in action:
+            return _FRAMES["talk"][tone]
+        if "accuse" in action:
+            return _FRAMES["accuse"][tone]
         return "You consider what you have learned."
