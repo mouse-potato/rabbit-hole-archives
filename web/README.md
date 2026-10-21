@@ -28,11 +28,11 @@ An unsuccessful accusation does not reveal whether the suspect was wrong or the 
 
 The deterministic demo needs no model. If you already run Ollama on a shared
 home server, **do not download another model** on your PC. Use the model's
-existing Ollama tag and the server's LAN hostname or IP:
+existing Ollama tag and the server's LAN hostname or IP. **Both values below are placeholders and must be replaced before running RHA:**
 
 ```powershell
-$env:RHA_OLLAMA_URL = "http://192.168.1.50:11434"  # replace with your server address
-$env:RHA_OLLAMA_MODEL = "your-installed-model-tag"
+$env:RHA_OLLAMA_URL = "http://YOUR_OLLAMA_SERVER_IP:11434"  # REQUIRED: replace placeholder
+$env:RHA_OLLAMA_MODEL = "YOUR_INSTALLED_OLLAMA_MODEL"  # REQUIRED: replace placeholder
 uv run python -m bunnyland_archives.demo_server
 ```
 
