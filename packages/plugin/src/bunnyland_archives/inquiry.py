@@ -36,14 +36,12 @@ def inquiry(text: str, packet: dict[str, Any]) -> str | None:
         and bool(re.search(r"\b(?:here|room|scene|surroundings|around me|study|hall)\b", normalized))
     )
     if scene_question:
-        named_rooms = {current, current_name.lower().removeprefix("the ")}
         other = "hall" if current == "study" else "study"
         if re.search(r"\b" + re.escape(other) + r"\b", normalized):
             return f"You are in {current_name}. You would need to visit the {other} to inspect it."
         items = [str(item["name"]) for item in options.get("evidence", [])]
         people = [
             str(item["name"]) for item in view.get("witnesses", [])
-            if item.get("place_key") == current
         ]
         detail = SCENES.get(current, f"You are in {current_name}.")
         if items:
