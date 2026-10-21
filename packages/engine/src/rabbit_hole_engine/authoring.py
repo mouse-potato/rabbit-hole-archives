@@ -121,11 +121,15 @@ class CaseDefinition(AuthoredModel):
             raise ValueError("duplicate solution support")
         if not set(support) <= clues:
             raise ValueError("unknown supporting evidence")
-        # The first slice has no travel/gating mechanics. Do not silently declare
-        # clues in other rooms reachable before those mechanics exist.
-        local_clues = {item.id for item in self.evidence if item.location == self.start_location}
-        if not set(support) <= local_clues:
-            raise ValueError("solution support must be accessible in the first-slice room")
+        # Legacy one-room cases had no travel mechanism. Schema v2 cases are
+        # investigated across rooms; every referenced clue location is validated
+        # above, while actual travel/reachability belongs to the runtime.
+        if self.schema_version == 1:
+            local_clues = {
+                item.id for item in self.evidence if item.location == self.start_location
+            }
+            if not set(support) <= local_clues:
+                raise ValueError("solution support must be accessible in the first-slice room")
         return self
 
 
