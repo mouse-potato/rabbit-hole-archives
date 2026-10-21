@@ -121,6 +121,9 @@ function renderPacket(packet) {
     book.append(section);
   }
   if (packet.outcome) {
+    if (typeof packet.narration === "string" && packet.narration) {
+      entry("Narrator: " + packet.narration);
+    }
     const outcome = packet.outcome;
     const result = [
       outcome.accepted ? "Action accepted" : "Action not completed",
@@ -136,8 +139,10 @@ function renderPacket(packet) {
 async function connect() {
   $("connect").disabled = true;
   try {
-    renderPacket(await request("/api/investigation"));
-    say($("status"), "Investigation ready.");
+    const packet = await request("/api/investigation");
+    renderPacket(packet);
+    say($("status"), "Investigation ready. " +
+      (packet.ai_enabled ? "Local AI interpretation enabled." : "Deterministic offline mode."));
   } catch (error) {
     say($("status"), "Unable to open investigation: " + error.message);
   } finally {
