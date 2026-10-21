@@ -13,11 +13,14 @@ The Rabbit Hole Archives is an AI narrated murder mystery game based on the [bun
 Requires Python 3.12 and [uv](https://docs.astral.sh/uv/). The dev environment installs a
 pinned upstream Bunnyland revision from `uv.lock`.
 
+`.python-version` pins the interpreter to 3.12, so plain `uv sync` selects it even when a
+newer Python is installed. CI additionally passes `--python 3.12` explicitly.
+
 ```sh
 uv sync --locked
-uv run pytest
-uv run ruff check .
-uv run mypy packages/engine/src packages/plugin/src tests
+uv run pytest          # expect 89 passed
+uv run ruff check .    # expect All checks passed!
+uv run mypy packages/engine/src packages/plugin/src tests   # expect Success, 16 files
 ```
 
 Load the plugin into a Bunnyland world with `bunnyland serve --plugin bunnyland.archives`; the
