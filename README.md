@@ -8,7 +8,7 @@
 
 **Some questions lead further down.**
 
-Rabbit Hole Archives is an AI-assisted detective mystery game built on the [Bunnyland](https://bunnyland.dev) framework. Investigate a case, question witnesses, examine evidence, and make your accusation. The truth of each mystery is established in advance: the Narrator can help you explore it, but cannot rewrite it.
+Rabbit Hole Archives is an AI-assisted detective mystery game built on the [Bunnyland](https://bunnyland.dev) framework. Investigate a case, question witnesses, examine evidence, and make your accusation. RHA is about discovering a truth that already exists, not inventing one as you go. The Narrator can help you explore that truth, but cannot rewrite it.
 
 ## Play the demo
 
