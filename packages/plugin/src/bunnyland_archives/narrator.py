@@ -54,7 +54,7 @@ _HANDLERS: dict[
 
 _VERBS: dict[str, tuple[str, ...]] = {
     COMMAND_TYPE: ("examine", "study", "look at", "inspect"),
-    TALK_COMMAND_TYPE: ("talk to", "talk with", "question", "ask"),
+    TALK_COMMAND_TYPE: ("talk to", "talk with", "question", "ask", "interview", "speak to"),
     ACCUSE_COMMAND_TYPE: ("accuse", "charge"),
 }
 
