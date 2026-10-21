@@ -1,10 +1,10 @@
-"""Local demo golden path and privacy checks (no LLM or web browser required)."""
+"""Local demo playthrough, invalid actions, and sealed-fact checks."""
 from __future__ import annotations
 
 from bunnyland_archives.demo_server import DemoGame
 
 
-def test_demo_can_solve_the_missing_seal() -> None:
+def test_demo_requires_both_rooms_and_clues_to_solve() -> None:
     game = DemoGame()
     initial = game.packet()
     assert initial["view"]["solved"] is False
@@ -18,13 +18,27 @@ def test_demo_can_solve_the_missing_seal() -> None:
     assert len(questioned["view"]["heard"]) == 2
 
     first = game.act("examine receipt")
-    assert first["outcome"]["observation"] == "A signed receipt for the seal, in Ada's hand."
+    assert "Ada Vance" in first["outcome"]["observation"]
     repeated = game.act("examine receipt")
     assert len(repeated["view"]["discovered"]) == 1
+
+    # A correct guess is not enough: the physical link from the hall is missing.
+    premature = game.act("accuse ada")
+    assert premature["outcome"]["verdict"] == "unproven"
+    assert premature["view"]["solved"] is False
 
     wrong = game.act("accuse halloran")
     assert wrong["outcome"]["verdict"] == "unproven"
     assert wrong["view"]["solved"] is False
+
+    moved = game.act("go to hall")
+    assert moved["view"]["place_key"] == "hall"
+    assert [item["key"] for item in moved["options"]["evidence"]] == ["glove"]
+    heard = game.act("talk to maid")
+    assert heard["outcome"]["accepted"] is True
+    examined = game.act("examine glove")
+    assert examined["outcome"]["accepted"] is True
+    assert len(examined["view"]["discovered"]) == 2
 
     solved = game.act("accuse ada")
     assert solved["outcome"]["verdict"] == "solved"
@@ -43,21 +57,30 @@ def test_demo_invalid_actions_and_room_change() -> None:
     assert far["outcome"]["accepted"] is False
     assert "not here" in far["outcome"]["detail"]
 
+    too_long = game.act("x" * 301)
+    assert too_long["outcome"]["accepted"] is False
+
+    invalid_room = game.act("go to attic")
+    assert invalid_room["outcome"]["accepted"] is False
+    assert invalid_room["view"]["place_key"] == "study"
+
     moved = game.act("go to hall")
     assert moved["view"]["place_key"] == "hall"
     assert [item["key"] for item in moved["options"]["evidence"]] == ["glove"]
 
-    heard = game.act("talk to maid")
-    assert heard["outcome"]["accepted"] is True
-    examined = game.act("examine glove")
-    assert examined["outcome"]["accepted"] is True
-
 
 def test_demo_never_serializes_sealed_case() -> None:
     game = DemoGame()
-    for packet in [game.packet(), game.act("accuse ada"), game.act("examine receipt")]:
+    for packet in [
+        game.packet(),
+        game.act("accuse ada"),
+        game.act("examine receipt"),
+        game.act("go to hall"),
+        game.act("examine glove"),
+        game.act("accuse ada"),
+    ]:
         text = str(packet)
-        assert "Ada signed for the seal and carried it out" not in text
+        assert "Ada signed the seal out and concealed it" not in text
         assert "theft" not in text
         assert "supporting_evidence" not in text
         assert "culprit_match" not in text
