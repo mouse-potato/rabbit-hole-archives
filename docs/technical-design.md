@@ -1,6 +1,6 @@
 # Rabbit Hole Archives — Technical Design (Working Draft)
 
-Status: **Draft v0.1** · Updated: 2026-10-20
+Status: **Draft v0.2** · Updated: 2026-10-21
 
 > **North star:** RHA is about discovering a truth that already exists, not inventing one as you go.
 
@@ -39,8 +39,8 @@ See [decisions](decisions/README.md).
 - **Case loader / validator:** imports a schema-versioned, authored case into ECS after checking structure and solvability assumptions. Does not retain a competing mutable case store.
 - **Detective ECS plugin:** models evidence, historical events, knowledge/beliefs, testimony provenance, and investigation/discovery state; registers gameplay action definitions, handlers, events, and projections.
 - **Trusted action pipeline:** converts player intent into proposed actions, validates eligibility and knowledge scope, then mutates permitted state.
-- **Narrator adapter:** narrates from a restricted view and action outputs. Dialogue can vary but must not introduce new authoritative facts.
-- **Standalone client:** text interaction and accessible, searchable casebook UI.
+- **Narrator adapter:** narrates from a restricted view and action outputs. Dialogue can vary but must not introduce new authoritative facts. Implemented core: `resolve_intent` (deterministic text → proposed action), `perform` (runs the real handler, caller applies the plan), `build_packet` (restricted view + public outcome only; privileged accusation fields never cross).
+- **Standalone client:** text interaction and accessible, searchable casebook UI. Not started; the front-end stack and accessibility tooling are undecided.
 - **Persistence:** rely on Bunnyland's persistence where verified; independently confirm that casebook data and canonical state round-trip correctly.
 
 These are conceptual module boundaries, **not** verified Python module paths or callable signatures.
@@ -66,6 +66,21 @@ Sources:
 - https://github.com/thalismind/bunnyland-server/blob/main/src/bunnyland/foundation/memory/plugin.py
 
 **Not yet verified:** mutation guards across all write paths; fine-grained secrecy and projection behavior; typed action handler signatures; mapping from snapshot storage to casebook; behavior under zero autonomous ticks; safe serialization of sealed facts.
+
+### Slice 2 update (2026-10-21)
+
+The plugin now pins `thalismind/bunnyland-server` at `87824d3c56a32ad91c522dbc242939b11592af05`
+and is exercised against it. See [bunnyland-integration.md](bunnyland-integration.md) for the
+pin, the verified interfaces, the remaining gaps, and ADR-003 for the trust boundary.
+Verified by execution (not only inspection): out-of-tree module loading contract, component
+and edge registration, `WorldActor.submit` acceptance of plugin actions, the
+`can_handle`/`execute`/`MutationPlan` handler contract, a full `save_world`/`load_world`
+round-trip with stable entity references, and three registered actions
+(`examine-evidence`, `talk-to-witness`, `accuse-suspect`) whose behaviour is deterministic
+across repeated runs. The snapshot contains
+sealed facts by design, so it is treated as a privileged artifact. Still open from the list
+above: mutation guards on other plugins' write paths, full asynchronous tick dispatch of an
+examination, and casebook notes (no note capability exists yet).
 
 ## Conceptual data model (proposed, subject to spike)
 
