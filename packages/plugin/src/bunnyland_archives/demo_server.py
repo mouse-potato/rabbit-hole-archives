@@ -6,6 +6,7 @@ This is a development server, not a production multiuser service.
 from __future__ import annotations
 
 import json
+import os
 import re
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -20,6 +21,8 @@ from bunnyland.core import (
 from bunnyland.plugins import apply_plugins
 from rabbit_hole_engine.authoring import CaseDefinition
 
+from .local_ai import LocalAI
+
 from . import (
     ArchiveEvidenceComponent, ArchivePlaceComponent, ArchiveSuspectComponent,
     InvestigatorSessionComponent, NarrationOutcome, NarrationPacket,
@@ -33,7 +36,9 @@ CASE_PATH = Path(__file__).with_name("demo_case.json")
 class DemoGame:
     """Own the authoritative ECS world; never serialize it to a browser."""
 
-    def __init__(self) -> None:
+    def __init__(self, ai: LocalAI | None = None) -> None:
+        model = os.environ.get("RHA_OLLAMA_MODEL", "").strip()
+        self.ai = ai if ai is not None else (LocalAI(model=model) if model else None)
         actor = WorldActor()
         apply_plugins([archive_plugin()], actor)
         case = CaseDefinition.model_validate_json(CASE_PATH.read_text(encoding="utf-8"))
@@ -81,10 +86,23 @@ class DemoGame:
                 "evidence": sorted(evidence_options, key=lambda x: x["key"]),
                 "suspects": sorted(suspects, key=lambda x: x["key"])}
 
-    def packet(self, packet: NarrationPacket | None = None) -> dict[str, object]:
+    def packet(
+        self, packet: NarrationPacket | None = None, *, narrate: bool = False,
+    ) -> dict[str, object]:
         safe = (packet or build_packet(self.actor.world, self.character)).model_dump(mode="json")
         safe["options"] = self._options()
+        if narrate and self.ai is not None:
+            safe["narration"] = self.ai.narrate(safe)
         return safe
+
+    def _ai_options(self) -> dict[str, object]:
+        options = self._options()
+        view = build_packet(self.actor.world, self.character).view
+        options["witnesses"] = [
+            {"key": witness.witness_key, "name": witness.name}
+            for witness in view.witnesses
+        ]
+        return options
 
     def act(self, text: str) -> dict[str, object]:
         if len(text) > 300:
@@ -102,6 +120,12 @@ class DemoGame:
                     detail="This case is closed. Start a new investigation to act again.",
                 ),
             ))
+        # A model may suggest a public option but cannot execute arbitrary commands.
+        # Known deterministic inputs continue to run without inference.
+        if self.ai is not None:
+            proposed = self.ai.propose(text, self._ai_options())
+            if proposed is not None:
+                text = proposed
         normalized = re.sub(r"[^a-z0-9\s-]", " ", text.lower())
         normalized = " ".join(normalized.split())
         movement = re.fullmatch(
@@ -147,7 +171,7 @@ class DemoGame:
                     )
             return self.packet(NarrationPacket(
                 view=build_packet(self.actor.world, self.character).view, outcome=outcome
-            ))
+            ), narrate=True)
 
         resolved = resolve_intent(self.actor.world, text)
         if resolved.status != "resolved":
@@ -155,7 +179,7 @@ class DemoGame:
                 view=build_packet(self.actor.world, self.character).view,
                 outcome=NarrationOutcome(action=resolved.command_type or "",
                                          accepted=False, detail=resolved.reason),
-            ))
+            ), narrate=True)
         ctx = HandlerContext(world=self.actor.world, epoch=self.actor.epoch)
         result = perform(
             ctx, character_id=str(self.character), controller_id=str(self.controller),
@@ -163,7 +187,7 @@ class DemoGame:
             apply=apply_handler_result,
         )
         return self.packet(build_packet(self.actor.world, self.character, result,
-                                        action=resolved.command_type or ""))
+                                        action=resolved.command_type or ""), narrate=True)
 
 
 def serve(host: str = "127.0.0.1", port: int = 8000) -> None:
