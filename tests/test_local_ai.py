@@ -61,7 +61,7 @@ def test_model_narration_cannot_inject_facts(monkeypatch: pytest.MonkeyPatch) ->
 
     monkeypatch.setattr(LocalAI, "_ask", hostile)
     narration = ai.narrate(packet)
-    assert narration == "The investigation sharpens."
+    assert narration == "The details demand careful scrutiny."
     assert "villain" not in narration
 
 
@@ -84,7 +84,7 @@ def test_demo_uses_model_proposal_but_engine_remains_authoritative(
     response = game.act("Please ask that fellow Quill what he saw")
     assert response["outcome"]["accepted"] is True
     assert len(response["view"]["heard"]) == 2
-    assert response["narration"] == "Another detail draws your attention."
+    assert response["narration"] == "Another perspective may illuminate the case."
     assert "solution" not in str(seen)
     assert "culprit" not in str(seen)
 
@@ -105,7 +105,7 @@ def test_model_unavailable_falls_back_without_mutation(
     packet = game.act("Some totally unknown request")
     assert packet["outcome"]["accepted"] is False
     assert packet["view"]["discovered"] == []
-    assert packet["narration"] == "That attempt gets you no further."
+    assert packet["narration"] == "That action cannot be completed."
 
 
 @pytest.mark.parametrize(("origin", "expected"), [
