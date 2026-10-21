@@ -6,6 +6,7 @@ inspect ECS solution components or discover evidence on the player's behalf.
 from __future__ import annotations
 
 import re
+from difflib import SequenceMatcher
 from typing import Any
 
 SCENES = {
@@ -17,6 +18,46 @@ SCENES = {
 def _clean(text: str) -> str:
     return " ".join(re.sub(r"[^a-z0-9\s'-]", " ", text.lower()).split())
 
+
+
+def evidence_command(text: str, options: dict[str, Any]) -> str | None:
+    """Recognize clear inspection requests for evidence visible in this room.
+
+    This is a conservative no-model fallback, not an open-ended action parser.
+    A bare, exact evidence name works; fuzzy spelling requires an inspection
+    verb and a uniquely matching visible item.
+    """
+    normalized = _clean(text)
+    requested = bool(re.search(r"\\b(?:examine|inspect|study|look at|take a look at)\\b", normalized))
+    candidates: list[str] = []
+    for item in options.get("evidence", []):
+        key = str(item["key"])
+        aliases = {key.replace("-", " ").lower(), str(item["name"]).lower()}
+        if any(
+            re.search(r"\\b" + re.escape(alias) + r"\\b", normalized)
+            for alias in aliases
+        ):
+            candidates.append(key)
+            continue
+        if not requested:
+            continue
+        words = normalized.split()
+        if any(
+            len(alias) >= 5
+            and any(
+                len(word) >= 5 and SequenceMatcher(None, word, alias).ratio() >= 0.85
+                for word in words
+            )
+            for alias in aliases
+        ):
+            candidates.append(key)
+    if len(candidates) != 1:
+        return None
+    key = candidates[0]
+    exact_bare = normalized in {key.replace("-", " ").lower()}
+    if requested or exact_bare:
+        return "examine " + key
+    return None
 
 def inquiry(text: str, packet: dict[str, Any]) -> str | None:
     """Return an answer for supported questions; None for gameplay commands.
