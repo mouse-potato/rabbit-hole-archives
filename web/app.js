@@ -72,9 +72,7 @@ function renderPacket(packet) {
   scene.replaceChildren();
   element("p", "CASE FILE / " + view.case_title, scene).className = "eyebrow";
   element("h3", view.place_name || "Unknown location", scene);
-  const description = view.place_key === "study"
-    ? "The study is quiet, but the empty space where the seal once rested is impossible to ignore. The desk holds the house's paperwork."
-    : "Beyond the study, the hall leads toward a side door. Footsteps and a discarded possession may tell you more than anyone's testimony.";
+  const description = packet.scene_description || "You survey the room.";
   element("p", description, scene);
   const options = packet.options || {};
   if (view.solved) {
