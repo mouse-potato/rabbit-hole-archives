@@ -10,7 +10,7 @@ from typing import Any
 
 SCENES = {
     "study": "The study is quiet. The seal's empty display space stands out beside a desk of paperwork.",
-    "hall": "The hall leads toward a side door. The side door marks the end of the passage.",
+    "hall": "The hall leads toward a side door, with space to investigate along the passage.",
 }
 
 
@@ -60,7 +60,10 @@ def inquiry(text: str, packet: dict[str, Any]) -> str | None:
         return "Your casebook records: " + " ".join(summary)
 
     question = bool(
-        re.match(r"^(?:who|what|where|when|why|how|does|did|can|could|is|was)\b", normalized)
+        re.match(
+            r"^(?:who|what|where|when|why|how|does|did|can|could|is|was|tell me about)\b",
+            normalized,
+        )
     )
     if question:
         for clue in view.get("discovered", []):
