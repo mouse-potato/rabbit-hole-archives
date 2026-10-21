@@ -44,7 +44,7 @@ from . import (
     perform,
     resolve_intent,
 )
-from .inquiry import SCENES, inquiry
+from .inquiry import SCENES, evidence_command, inquiry
 from .local_ai import LocalAI, ollama_chat_endpoint
 
 WEB_ROOT = Path(__file__).resolve().parents[4] / "web"
