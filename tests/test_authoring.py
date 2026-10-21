@@ -35,9 +35,12 @@ def test_valid_case_round_trip() -> None:
 
 
 @pytest.mark.parametrize("mutate", [
-    lambda d: d.update(schema_version=2),
+    lambda d: d.update(schema_version=3),
     lambda d: d.update(schema_version="1"),
     lambda d: d.update(unexpected="ignored?"),
+    lambda d: d.update(
+        witnesses=[{"id": "porter", "name": "Porter", "location": "study"}]
+    ),
     lambda d: d.update(start_location="nowhere"),
     lambda d: d.update(title="  "),
     lambda d: d["evidence"][0].update(id="study"),

@@ -29,8 +29,12 @@ from .components import (
     ArchiveEvidenceComponent,
     ArchivePlaceComponent,
     ArchiveSuspectComponent,
+    ArchiveTestimonyComponent,
+    ArchiveWitnessComponent,
     EvidenceFromEvent,
     SealedSolutionComponent,
+    TestimonyFromWitness,
+    TestimonyPointsTo,
 )
 
 
@@ -48,6 +52,8 @@ class ImportedCase:
     events: dict[str, EntityId]
     suspects: dict[str, EntityId]
     evidence: dict[str, EntityId]
+    witnesses: dict[str, EntityId]
+    testimony: dict[str, EntityId]
 
 
 def imported_case_keys(world: World) -> frozenset[str]:
@@ -135,6 +141,46 @@ def import_case(world: World, case: CaseDefinition) -> ImportedCase:
         entity.add_relationship(EvidenceFromEvent(), events[clue.source_event])
         evidence[clue.id] = entity.id
 
+    witnesses: dict[str, EntityId] = {}
+    for witness in case.witnesses:
+        entity = spawn_entity(
+            world,
+            [
+                IdentityComponent(name=witness.name, kind="witness"),
+                ArchiveWitnessComponent(
+                    case_key=case.id,
+                    witness_key=witness.id,
+                    name=witness.name,
+                    place_key=witness.location,
+                ),
+            ],
+        )
+        world.get_entity(places[witness.location]).add_relationship(
+            Contains(mode=ContainmentMode.ROOM_CONTENT), entity.id
+        )
+        witnesses[witness.id] = entity.id
+
+    authored_order = {statement.id: index for index, statement in enumerate(case.testimony)}
+    testimony: dict[str, EntityId] = {}
+    for statement in case.testimony:
+        entity = spawn_entity(
+            world,
+            [
+                ArchiveTestimonyComponent(
+                    case_key=case.id,
+                    testimony_key=statement.id,
+                    witness_key=statement.witness,
+                    statement=statement.statement,
+                    points_to_key=statement.points_to,
+                    order=authored_order[statement.id],
+                ),
+            ],
+        )
+        entity.add_relationship(TestimonyFromWitness(), witnesses[statement.witness])
+        if statement.points_to is not None:
+            entity.add_relationship(TestimonyPointsTo(), evidence[statement.points_to])
+        testimony[statement.id] = entity.id
+
     return ImportedCase(
         case_key=case.id,
         case_entity=case_entity.id,
@@ -142,6 +188,8 @@ def import_case(world: World, case: CaseDefinition) -> ImportedCase:
         events=events,
         suspects=suspects,
         evidence=evidence,
+        witnesses=witnesses,
+        testimony=testimony,
     )
 
 

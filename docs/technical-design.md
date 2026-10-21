@@ -73,9 +73,11 @@ The plugin now pins `thalismind/bunnyland-server` at `87824d3c56a32ad91c522dbc24
 and is exercised against it. See [bunnyland-integration.md](bunnyland-integration.md) for the
 pin, the verified interfaces, the remaining gaps, and ADR-003 for the trust boundary.
 Verified by execution (not only inspection): out-of-tree module loading contract, component
-and edge registration, `WorldActor.submit` acceptance of a plugin action, the
-`can_handle`/`execute`/`MutationPlan` handler contract, and a full
-`save_world`/`load_world` round-trip with stable entity references. The snapshot contains
+and edge registration, `WorldActor.submit` acceptance of plugin actions, the
+`can_handle`/`execute`/`MutationPlan` handler contract, a full `save_world`/`load_world`
+round-trip with stable entity references, and three registered actions
+(`examine-evidence`, `talk-to-witness`, `accuse-suspect`) whose behaviour is deterministic
+across repeated runs. The snapshot contains
 sealed facts by design, so it is treated as a privileged artifact. Still open from the list
 above: mutation guards on other plugins' write paths, full asynchronous tick dispatch of an
 examination, and casebook notes (no note capability exists yet).

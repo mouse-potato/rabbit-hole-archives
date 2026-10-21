@@ -1,7 +1,7 @@
 # Bunnyland integration: pinned revision and trust boundary
 
-Status: **Slices 2 (M1 ECS integration) and 3 (persistence round-trip) implemented
-2026-10-21.** This note records what is actually verified, what is only assumed, and where
+Status: **Slices 2 (M1 ECS integration), 3 (persistence round-trip), and 4 (playable
+micro-case) implemented 2026-10-21.** This note records what is actually verified, what is only assumed, and where
 the trust boundary sits.
 
 ## Pinned upstream revision
@@ -49,12 +49,12 @@ the invariants below is a review-worthy change, not a routine bump.
 
 ### Still unverified
 
-- Full asynchronous tick dispatch of an examination (tests apply the handler's plan
-  directly, the same level Bunnyland's own handler tests use).
+- Full asynchronous tick dispatch of an action (tests apply the handler's plan directly,
+  the same level Bunnyland's own handler tests use).
 - Whether any other Bunnyland plugin can mutate components it does not own; the
   immutability guarantee below is enforced by our code and tests, not by ECS.
 - Player/casebook notes: no note capability exists yet, so nothing about notes round-trips.
-- Mapping from snapshot storage to a casebook surface (slice 4).
+- Mapping from snapshot storage to a player-facing casebook surface (slice 5).
 
 ## Trust boundary
 

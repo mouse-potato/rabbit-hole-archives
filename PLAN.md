@@ -13,10 +13,14 @@ Progress:
   canonical state, provenance edges, investigator location, and discoveries all survive
   with stable entity references; projections are identical after reload; adversarial tests
   confirm sealed facts stay out of projections while the save file itself is privileged.
-- **Slice 4 next** — playable micro-case: witnesses, attributed testimony, leads, and a
-  validated accusation, all deterministic. Note M1 still owes full asynchronous tick
-  dispatch of an examination; current tests apply the handler's mutation plan directly,
-  and there is no player-note/casebook surface yet.
+- **Slice 4 complete (2026-10-21)** — playable micro-case: schema v2 witnesses and
+  attributed testimony, `talk-to-witness` with ordered statements and leads,
+  `accuse-suspect` resolved deterministically against the sealed solution, and neutral
+  public verdicts (ADR-004). 75 tests. M1 still owes full asynchronous tick dispatch of an
+  action; current tests apply the handler's mutation plan directly.
+- **Slice 5 next** — standalone client consuming restricted projections plus the Narrator
+  adapter (no authoritative narration), keyboard/axe checks, documented accessibility
+  limits.
 
 Existing ADRs and technical-design.md are authoritative.
 

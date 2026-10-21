@@ -46,10 +46,36 @@ class ArchiveEventComponent(Component):
 
 @dataclass(frozen=True)
 class ArchiveSuspectComponent(Component):
-    """A canonical suspect. Not a live character; testimony arrives in a later slice."""
+    """A canonical suspect. Not a live character; no autonomous behaviour."""
 
     suspect_key: str
     name: str
+
+
+@dataclass(frozen=True)
+class ArchiveWitnessComponent(Component):
+    """A canonical witness, placed in one canonical room so travel governs access."""
+
+    case_key: str
+    witness_key: str
+    name: str
+    place_key: str
+
+
+@dataclass(frozen=True)
+class ArchiveTestimonyComponent(Component):
+    """One sealed, attributed statement in authored order.
+
+    ``points_to_key`` is a lead (an evidence key), never the clue's observation, so
+    revealing a lead cannot reveal what the clue says.
+    """
+
+    case_key: str
+    testimony_key: str
+    witness_key: str
+    statement: str
+    points_to_key: str | None
+    order: int
 
 
 @dataclass(frozen=True)
@@ -89,8 +115,43 @@ class DiscoveryComponent(Component):
 
 
 @dataclass(frozen=True)
+class ArchiveConversationComponent(Component):
+    """Mutable: one record that an investigator has heard a witness out."""
+
+    case_key: str
+    witness_key: str
+    first_heard_at_epoch: int
+
+
+@dataclass(frozen=True)
+class ArchiveAccusationComponent(Component):
+    """Mutable: one accusation an investigator has formally made.
+
+    ``verdict`` and ``culprit_match`` are privileged bookkeeping. Player-facing text never
+    distinguishes "wrong person" from "not enough evidence".
+    """
+
+    case_key: str
+    suspect_key: str
+    verdict: str
+    culprit_match: bool
+    missing_evidence: tuple[str, ...]
+    made_at_epoch: int
+
+
+@dataclass(frozen=True)
 class EvidenceFromEvent(Edge):
     """evidence -> canonical event that produced it (provenance)."""
+
+
+@dataclass(frozen=True)
+class TestimonyFromWitness(Edge):
+    """testimony -> canonical witness who said it (attribution)."""
+
+
+@dataclass(frozen=True)
+class TestimonyPointsTo(Edge):
+    """testimony -> canonical evidence it leads toward."""
 
 
 @dataclass(frozen=True)
@@ -103,20 +164,54 @@ class DiscoveryOf(Edge):
     """discovery record -> canonical evidence entity."""
 
 
+@dataclass(frozen=True)
+class ConversationBy(Edge):
+    """conversation record -> investigator character."""
+
+
+@dataclass(frozen=True)
+class ConversationWith(Edge):
+    """conversation record -> canonical witness entity."""
+
+
+@dataclass(frozen=True)
+class AccusationBy(Edge):
+    """accusation record -> investigator character."""
+
+
+@dataclass(frozen=True)
+class AccusationOf(Edge):
+    """accusation record -> canonical suspect entity."""
+
+
 CANONICAL_COMPONENTS: tuple[type, ...] = (
     ArchiveCaseComponent,
     ArchivePlaceComponent,
     ArchiveEventComponent,
     ArchiveSuspectComponent,
     ArchiveEvidenceComponent,
+    ArchiveWitnessComponent,
+    ArchiveTestimonyComponent,
     SealedSolutionComponent,
 )
 
 MUTABLE_COMPONENTS: tuple[type, ...] = (
     InvestigatorSessionComponent,
     DiscoveryComponent,
+    ArchiveConversationComponent,
+    ArchiveAccusationComponent,
 )
 
 COMPONENT_TYPES: tuple[type, ...] = (*CANONICAL_COMPONENTS, *MUTABLE_COMPONENTS)
 
-EDGE_TYPES: tuple[type, ...] = (EvidenceFromEvent, DiscoveredBy, DiscoveryOf)
+EDGE_TYPES: tuple[type, ...] = (
+    EvidenceFromEvent,
+    TestimonyFromWitness,
+    TestimonyPointsTo,
+    DiscoveredBy,
+    DiscoveryOf,
+    ConversationBy,
+    ConversationWith,
+    AccusationBy,
+    AccusationOf,
+)

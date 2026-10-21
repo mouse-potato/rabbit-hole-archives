@@ -32,11 +32,15 @@ from bunnyland.core import (
 )
 from bunnyland.plugins import apply_plugins
 from bunnyland_archives import (
+    ACCUSE_COMMAND_TYPE,
     COMMAND_TYPE,
     PLUGIN_ID,
+    TALK_COMMAND_TYPE,
+    AccuseSuspectHandler,
     ArchiveNarratorView,
     ExamineEvidenceHandler,
     ImportedCase,
+    TalkToWitnessHandler,
     apply_handler_result,
     archive_plugin,
     import_case,
@@ -50,7 +54,7 @@ def case_data() -> dict[str, Any]:
     """A two-room case: one clue at the start, one out of reach from the start."""
 
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "id": "missing_seal",
         "title": "The Missing Seal",
         "start_location": "study",
@@ -62,7 +66,10 @@ def case_data() -> dict[str, Any]:
             {"id": "theft", "description": "Ada signed for the seal at the desk."},
             {"id": "departure", "description": "Ada left the hall with a heavy glove."},
         ],
-        "suspects": [{"id": "ada", "name": "Ada Vance"}],
+        "suspects": [
+            {"id": "ada", "name": "Ada Vance"},
+            {"id": "halloran", "name": "Mr Halloran"},
+        ],
         "evidence": [
             {
                 "id": "receipt",
@@ -75,6 +82,29 @@ def case_data() -> dict[str, Any]:
                 "location": "hall",
                 "observation": "A single glove, still damp.",
                 "source_event": "departure",
+            },
+        ],
+        "witnesses": [
+            {"id": "porter", "name": "Porter Quill", "location": "study"},
+            {"id": "maid", "name": "Maid Rosalind", "location": "hall"},
+        ],
+        "testimony": [
+            {
+                "id": "porter-heard-arguing",
+                "witness": "porter",
+                "statement": "I heard raised voices in the study before the seal went missing.",
+            },
+            {
+                "id": "porter-saw-receipt",
+                "witness": "porter",
+                "statement": "There is a receipt on the desk that you should look at.",
+                "points_to": "receipt",
+            },
+            {
+                "id": "maid-saw-glove",
+                "witness": "maid",
+                "statement": "Someone dropped a glove in the hall and did not come back for it.",
+                "points_to": "glove",
             },
         ],
         "solution": {
@@ -147,16 +177,32 @@ def build_scenario(case: CaseDefinition | None = None) -> ArchiveScenario:
     )
 
 
-def examine_command(scenario: ArchiveScenario, target_id: EntityId | str) -> Any:
+def _command(
+    scenario: ArchiveScenario,
+    command_type: str,
+    target_id: EntityId | str,
+) -> Any:
     return build_submitted_command(
         character_id=str(scenario.character),
         controller_id=str(scenario.controller),
         controller_generation=scenario.generation,
-        command_type=COMMAND_TYPE,
+        command_type=command_type,
         cost=CommandCost(action=1),
         lane=Lane.WORLD,
         payload={"target_id": str(target_id)},
     )
+
+
+def examine_command(scenario: ArchiveScenario, target_id: EntityId | str) -> Any:
+    return _command(scenario, COMMAND_TYPE, target_id)
+
+
+def talk_command(scenario: ArchiveScenario, target_id: EntityId | str) -> Any:
+    return _command(scenario, TALK_COMMAND_TYPE, target_id)
+
+
+def accuse_command(scenario: ArchiveScenario, target_id: EntityId | str) -> Any:
+    return _command(scenario, ACCUSE_COMMAND_TYPE, target_id)
 
 
 def examine(scenario: ArchiveScenario, target_id: EntityId | str) -> HandlerResult:
@@ -165,6 +211,22 @@ def examine(scenario: ArchiveScenario, target_id: EntityId | str) -> HandlerResu
     handler = ExamineEvidenceHandler()
     ctx = scenario.ctx()
     result = handler.execute(ctx, examine_command(scenario, target_id))
+    apply_handler_result(ctx, result)
+    return result
+
+
+def talk(scenario: ArchiveScenario, target_id: EntityId | str) -> HandlerResult:
+    handler = TalkToWitnessHandler()
+    ctx = scenario.ctx()
+    result = handler.execute(ctx, talk_command(scenario, target_id))
+    apply_handler_result(ctx, result)
+    return result
+
+
+def accuse(scenario: ArchiveScenario, target_id: EntityId | str) -> HandlerResult:
+    handler = AccuseSuspectHandler()
+    ctx = scenario.ctx()
+    result = handler.execute(ctx, accuse_command(scenario, target_id))
     apply_handler_result(ctx, result)
     return result
 
@@ -178,6 +240,24 @@ def move_to(scenario: ArchiveScenario, place_key: str) -> None:
         scenario.world.get_entity(room_id).remove_relationship(Contains, scenario.character)
     scenario.world.get_entity(scenario.imported.places[place_key]).add_relationship(
         Contains(mode=ContainmentMode.ROOM_CONTENT), character.id
+    )
+
+
+def conversation_entities(scenario: ArchiveScenario) -> list[Entity]:
+    from bunnyland_archives.components import ArchiveConversationComponent
+
+    return list(
+        scenario.world.query()
+        .with_all([ArchiveConversationComponent])
+        .execute_entities()
+    )
+
+
+def accusation_entities(scenario: ArchiveScenario) -> list[Entity]:
+    from bunnyland_archives.components import ArchiveAccusationComponent
+
+    return list(
+        scenario.world.query().with_all([ArchiveAccusationComponent]).execute_entities()
     )
 
 

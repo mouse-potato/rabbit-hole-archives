@@ -15,9 +15,15 @@ from pydantic import BaseModel, ConfigDict
 from relics import Entity, EntityId, World
 
 from .components import (
+    AccusationBy,
+    ArchiveAccusationComponent,
     ArchiveCaseComponent,
+    ArchiveConversationComponent,
     ArchiveEvidenceComponent,
     ArchivePlaceComponent,
+    ArchiveTestimonyComponent,
+    ArchiveWitnessComponent,
+    ConversationBy,
     DiscoveredBy,
     DiscoveryComponent,
     DiscoveryOf,
@@ -39,6 +45,28 @@ class DiscoveredEvidenceView(BaseModel):
     observation: str
 
 
+class WitnessPresentView(BaseModel):
+    """A witness standing in the investigator's current place. Name only."""
+
+    model_config = ConfigDict(frozen=True)
+
+    witness_key: str
+    name: str
+
+
+class HeardTestimonyView(BaseModel):
+    """One statement the investigator has already heard, with any lead it carries.
+
+    A lead is an evidence key, never the clue's canonical observation.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    witness_key: str
+    statement: str
+    lead_evidence_key: str | None
+
+
 class ArchiveNarratorView(BaseModel):
     """The complete, safe archive state available to narration for one character."""
 
@@ -49,6 +77,9 @@ class ArchiveNarratorView(BaseModel):
     place_key: str | None
     place_name: str | None
     discovered: tuple[DiscoveredEvidenceView, ...]
+    witnesses: tuple[WitnessPresentView, ...] = ()
+    heard: tuple[HeardTestimonyView, ...] = ()
+    solved: bool = False
 
 
 def _case_entity(world: World, case_key: str) -> Entity:
@@ -107,18 +138,75 @@ def narrator_view(world: World, character_id: EntityId | str) -> ArchiveNarrator
             )
     discovered.sort(key=lambda item: item.evidence_key)
 
+    witnesses = tuple(
+        sorted(
+            (
+                WitnessPresentView(witness_key=item.witness_key, name=item.name)
+                for item in (
+                    entity.get_component(ArchiveWitnessComponent)
+                    for entity in world.query()
+                    .with_all([ArchiveWitnessComponent])
+                    .execute_entities()
+                )
+                if item.case_key == case_key and place_key is not None
+                and item.place_key == place_key
+            ),
+            key=lambda view: view.witness_key,
+        )
+    )
+
+    heard_witnesses = {
+        entity.get_component(ArchiveConversationComponent).witness_key
+        for entity in world.query()
+        .with_all([ArchiveConversationComponent])
+        .execute_entities()
+        if entity.get_component(ArchiveConversationComponent).case_key == case_key
+        and entity.has_relationship(ConversationBy, parsed)
+    }
+    statements = [
+        entity.get_component(ArchiveTestimonyComponent)
+        for entity in world.query()
+        .with_all([ArchiveTestimonyComponent])
+        .execute_entities()
+    ]
+    heard = tuple(
+        HeardTestimonyView(
+            witness_key=item.witness_key,
+            statement=item.statement,
+            lead_evidence_key=item.points_to_key,
+        )
+        for item in sorted(
+            (item for item in statements if item.witness_key in heard_witnesses),
+            key=lambda item: (item.witness_key, item.order),
+        )
+    )
+
+    solved = any(
+        entity.get_component(ArchiveAccusationComponent).case_key == case_key
+        and entity.get_component(ArchiveAccusationComponent).verdict == "solved"
+        and entity.has_relationship(AccusationBy, parsed)
+        for entity in world.query()
+        .with_all([ArchiveAccusationComponent])
+        .execute_entities()
+    )
+
     return ArchiveNarratorView(
         case_key=case.case_key,
         case_title=case.title,
         place_key=place_key,
         place_name=place_name,
         discovered=tuple(discovered),
+        witnesses=witnesses,
+        heard=heard,
+        solved=solved,
     )
 
 
 __all__ = [
     "ArchiveNarratorView",
     "DiscoveredEvidenceView",
+    "HeardTestimonyView",
     "ProjectionError",
+    "WitnessPresentView",
     "narrator_view",
 ]

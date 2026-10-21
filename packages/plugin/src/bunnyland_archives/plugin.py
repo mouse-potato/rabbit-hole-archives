@@ -16,7 +16,14 @@ from bunnyland.plugins import (
 
 from .actions import ACTION_DEFINITIONS
 from .components import COMPONENT_TYPES, EDGE_TYPES
-from .mechanics import EvidenceExaminedEvent, ExamineEvidenceHandler
+from .mechanics import (
+    AccusationResolvedEvent,
+    AccuseSuspectHandler,
+    EvidenceExaminedEvent,
+    ExamineEvidenceHandler,
+    TalkToWitnessHandler,
+    WitnessQuestionedEvent,
+)
 
 PLUGIN_ID = "bunnyland.archives"
 PLUGIN_VERSION = "0.1.0"
@@ -36,8 +43,16 @@ def archive_plugin() -> Plugin:
         ),
         commands=CommandContribution(
             action_definitions=ACTION_DEFINITIONS,
-            action_handlers=(ExamineEvidenceHandler,),
-            typed_events=(EvidenceExaminedEvent,),
+            action_handlers=(
+                ExamineEvidenceHandler,
+                TalkToWitnessHandler,
+                AccuseSuspectHandler,
+            ),
+            typed_events=(
+                EvidenceExaminedEvent,
+                WitnessQuestionedEvent,
+                AccusationResolvedEvent,
+            ),
         ),
         content=ContentContribution(),
     )
