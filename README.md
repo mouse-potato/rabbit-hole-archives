@@ -8,35 +8,39 @@
 
 **Some questions lead further down.**
 
-The Rabbit Hole Archives is an AI narrated murder mystery game based on the [bunnyland.dev](https://bunnyland.dev) framework. RHA is about discovering a truth that already exists, not inventing one as you go.
+Rabbit Hole Archives is an AI-assisted detective mystery game built on the [Bunnyland](https://bunnyland.dev) framework. Investigate a case, question witnesses, examine evidence, and make your accusation. RHA is about discovering a truth that already exists, not inventing one as you go. The Narrator can help you explore that truth, but cannot rewrite it.
 
-## Design documentation
+## Play the demo
 
-- [Visual style guide](docs/design/visual-style-guide.md) — approved direction for color, typography, illustration, evidence presentation, and accessibility.
+The first playable mystery, **The Missing Seal**, runs in your browser on a local development server. You'll investigate two rooms, interview witnesses, and assemble evidence before accusing a suspect.
 
-## Layout
-
-- `packages/engine/src/rabbit_hole_engine` — strict, versioned case-authoring schema and validation (no Bunnyland dependency).
-- `packages/plugin/src/bunnyland_archives` — out-of-tree Bunnyland plugin: canonical case components, privileged import, deterministic examination action, restricted Narrator projection.
-- `docs/` — technical design, ADRs, and the pinned Bunnyland integration notes.
-
-## Development
-
-Requires Python 3.12 and [uv](https://docs.astral.sh/uv/). The dev environment installs a
-pinned upstream Bunnyland revision from `uv.lock`.
-
-`.python-version` pins the interpreter to 3.12, so plain `uv sync` selects it even when a
-newer Python is installed. CI additionally passes `--python 3.12` explicitly.
+Requires **Python 3.12** and [uv](https://docs.astral.sh/uv/). From the repository root:
 
 ```sh
 uv sync --locked
-uv run pytest          # expect 89 passed
-uv run ruff check .    # expect All checks passed!
-uv run mypy packages/engine/src packages/plugin/src tests   # expect Success, 16 files
+uv run python -m bunnyland_archives.demo_server
 ```
 
-Load the plugin into a Bunnyland world with `bunnyland serve --plugin bunnyland.archives`; the
-`bunnyland.plugins` entry point in `pyproject.toml` exposes `bunnyland_plugins()`. The plugin
-is opt-in (`default_enabled=False`) and registers nothing until requested. Case import is
-privileged in-process code; see `docs/bunnyland-integration.md` before wiring it into a
-server entrypoint.
+Open **http://127.0.0.1:8000/** to play. No AI model is required: the demo works with deterministic commands and action buttons.
+
+To try AI-assisted natural-language commands and constrained narration, connect an existing Ollama model on your PC or home server. See the [demo setup guide](web/README.md) for configuration, limitations, and playtesting instructions.
+
+## Project structure
+
+- `packages/engine/src/rabbit_hole_engine/` — versioned mystery definitions and validation.
+- `packages/plugin/src/bunnyland_archives/` — Bunnyland integration, investigation mechanics, and the Narrator boundary.
+- `web/` — browser demo and its local setup guide.
+- `tests/` — mechanics, persistence, intent, and demo regression tests.
+- `docs/` — design notes, visual references, technical decisions, and integration details.
+
+## Development
+
+Install dependencies with `uv sync --locked`, then run the checks from the repository root:
+
+```sh
+uv run pytest -q
+uv run ruff check .
+uv run mypy packages/engine/src packages/plugin/src tests
+```
+
+The demo is a **localhost-only, single-player development prototype**, not a public deployment. Its investigation state resets when the server restarts. See [web/README.md](web/README.md) for manual playtesting and accessibility checks.
