@@ -91,6 +91,7 @@ class DemoGame:
     ) -> dict[str, object]:
         safe = (packet or build_packet(self.actor.world, self.character)).model_dump(mode="json")
         safe["options"] = self._options()
+        safe["ai_enabled"] = self.ai is not None
         if narrate and self.ai is not None:
             safe["narration"] = self.ai.narrate(safe)
         return safe
@@ -122,7 +123,17 @@ class DemoGame:
             ))
         # A model may suggest a public option but cannot execute arbitrary commands.
         # Known deterministic inputs continue to run without inference.
-        if self.ai is not None:
+        # Preserve the existing reliable parser, especially button commands.
+        # Only ask the model when deterministic parsing cannot resolve intent.
+        known_movement = re.match(
+            r"^(?:go to|move to|travel to|walk into|walk to|go|move|travel|enter|visit) ",
+            text.strip().lower(),
+        )
+        if (
+            self.ai is not None
+            and known_movement is None
+            and resolve_intent(self.actor.world, text).status != "resolved"
+        ):
             proposed = self.ai.propose(text, self._ai_options())
             if proposed is not None:
                 text = proposed
