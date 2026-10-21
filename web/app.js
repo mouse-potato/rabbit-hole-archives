@@ -145,6 +145,20 @@ async function connect() {
   }
 }
 $("connect").addEventListener("click", connect);
+$("export-transcript").addEventListener("click", () => {
+  const lines = Array.from(transcript.querySelectorAll("li"), (item, index) =>
+    String(index + 1) + ". " + item.textContent.trim());
+  const content = [caseTitle, "Investigation transcript", "", ...lines, ""].join("\n");
+  const file = new Blob([content], { type: "text/plain;charset=utf-8" });
+  const address = URL.createObjectURL(file);
+  const link = document.createElement("a");
+  link.href = address;
+  link.download = "rabbit-hole-archives-transcript.txt";
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(address);
+});
 $("command-form").addEventListener("submit", async event => {
   event.preventDefault();
   const text = $("command").value.trim();
