@@ -41,9 +41,10 @@ async function act(text) {
     entry("Unable to act: " + error.message);
   } finally {
     busy = false;
-    $("command").disabled = false;
-    $("act-button").disabled = false;
-    $("command").focus();
+    const closed = Boolean($("scene").querySelector(".success"));
+    $("command").disabled = closed;
+    $("act-button").disabled = closed;
+    if (!closed) $("command").focus();
   }
 }
 function actions(title, items, verb, parent, currentKey = "") {
@@ -85,12 +86,16 @@ function renderPacket(packet) {
   } else {
     element("p", "Examine the scene, interview the witnesses, and find enough evidence to support your theory.", scene).className = "hint";
   }
-  actions("Travel", options.places || [], "go to", scene, view.place_key);
-  actions("Examine", options.evidence || [], "examine", scene);
-  actions("Interview", (view.witnesses || []).map(w => ({
-    key: w.witness_key, name: w.name
-  })), "talk to", scene);
-  actions("Make an accusation", options.suspects || [], "accuse", scene);
+  if (!view.solved) {
+    actions("Travel", options.places || [], "go to", scene, view.place_key);
+    actions("Examine", options.evidence || [], "examine", scene);
+    actions("Interview", (view.witnesses || []).map(w => ({
+      key: w.witness_key, name: w.name
+    })), "talk to", scene);
+    actions("Make an accusation", options.suspects || [], "accuse", scene);
+  }
+  $("command").disabled = Boolean(view.solved);
+  $("act-button").disabled = Boolean(view.solved);
 
   const book = $("casebook");
   book.replaceChildren();
