@@ -92,7 +92,7 @@ class DemoGame:
                 view=build_packet(self.actor.world, self.character).view,
                 outcome=NarrationOutcome(action="", accepted=False, detail="Command is too long."),
             ))
-        normalized = re.sub(r"[^a-z0-9\\s-]", " ", text.lower())
+        normalized = re.sub(r"[^a-z0-9\s-]", " ", text.lower())
         normalized = " ".join(normalized.split())
         movement = re.fullmatch(
             r"(?:go to|move to|travel to|go|move|travel|enter|visit) (.+)",
