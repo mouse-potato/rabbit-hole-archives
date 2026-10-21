@@ -1,6 +1,6 @@
 <div align="center">
 
-![Rabbit Hole Archives — Some questions lead further down](docs/design/references/readme-header.svg)
+![Rabbit Hole Archives — Some questions lead further down](docs/design/references/readme-header.png)
 
 </div>
 
