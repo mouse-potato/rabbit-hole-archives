@@ -104,6 +104,18 @@ def test_normal_commands_are_not_intercepted_as_inquiries() -> None:
     assert moved["view"]["place_key"] == "hall"
 
 
+@pytest.mark.parametrize("request", [
+    "Could you ask Quill what he heard?",
+    "Can I go to the hall?",
+    "Would you examine the receipt?",
+])
+def test_polite_action_requests_are_not_swallowed(request: str) -> None:
+    from bunnyland_archives.inquiry import inquiry
+
+    game = DemoGame()
+    assert inquiry(request, game.packet()) is None
+
+
 def test_existing_accusations_still_require_evidence() -> None:
     game = DemoGame()
     game.act("what's in the hall?")
