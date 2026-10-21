@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rabbit Hole Archives — Investigation Desk</title>
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<a class="skip" href="#investigation">Skip to investigation</a>
+<header><p class="eyebrow">THE INVESTIGATION DESK</p><h1>Rabbit Hole Archives</h1><p>Some questions lead further down.</p></header>
+<main id="investigation">
+<section aria-labelledby="connection-heading"><h2 id="connection-heading">Connect to a case</h2>
+<p>This client uses the restricted investigation API; it does not load sealed case files into your browser.</p>
+<label for="server">API base URL</label><input id="server" value="http://localhost:8000" autocomplete="url">
+<button id="connect">Open investigation</button><p id="status" role="status" aria-live="polite">Not connected.</p>
+</section>
+<div class="layout">
+<section aria-labelledby="scene-heading"><h2 id="scene-heading">Scene</h2><div id="scene"><p>Connect to begin.</p></div>
+<form id="command-form"><label for="command">What do you do?</label><div class="command"><input id="command" autocomplete="off" placeholder="Examine the letter; talk to a witness…"><button type="submit">Act</button></div></form>
+<h3>Investigation transcript</h3><ol id="transcript" aria-label="Investigation transcript" aria-live="polite" aria-relevant="additions"></ol>
+</section>
+<aside aria-labelledby="casebook-heading"><h2 id="casebook-heading">Casebook</h2><div id="casebook"><p>Discovered evidence and testimony appear here.</p></div></aside>
+</div>
+</main><script src="./app.js" defer></script></body></html>
