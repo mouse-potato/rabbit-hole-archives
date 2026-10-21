@@ -121,6 +121,11 @@ def _targets(world: World) -> dict[str, list[tuple[str, EntityId]]]:
         witness = entity.get_component(ArchiveWitnessComponent)
         add(witness.witness_key.replace("-", " "), TALK_COMMAND_TYPE, entity.id)
         add(witness.name, TALK_COMMAND_TYPE, entity.id)
+        # A character's last name is a natural shorthand. Collisions must
+        # still resolve as ambiguous, never arbitrarily pick a witness.
+        parts = witness.name.split()
+        if len(parts) > 1:
+            add(parts[-1], TALK_COMMAND_TYPE, entity.id)
     for entity in world.query().with_all([ArchiveSuspectComponent]).execute_entities():
         suspect = entity.get_component(ArchiveSuspectComponent)
         add(suspect.suspect_key.replace("-", " "), ACCUSE_COMMAND_TYPE, entity.id)
@@ -162,6 +167,9 @@ def resolve_intent(world: World, text: str) -> IntentResolution:
     if matches:
         longest = max(len(phrase) for phrase, _entity in matches)
         matches = [(phrase, entity) for phrase, entity in matches if len(phrase) == longest]
+    # Key, full name, and surname may all name the same entity.
+    # Deduplicate identity, but keep distinct characters ambiguous.
+    matches = list(dict.fromkeys(matches))
     if len(matches) > 1:
         return IntentResolution(
             status="unresolved", command_type=command_type, reason="ambiguous target"
