@@ -20,7 +20,7 @@
     },
     {
       "id": "departure",
-      "description": "Ada left the hall with a heavy glove."
+      "description": "Ada carried the seal away concealed in her riding glove."
     }
   ],
   "suspects": [
@@ -37,13 +37,13 @@
     {
       "id": "receipt",
       "location": "study",
-      "observation": "A signed receipt for the seal, in Ada's hand.",
+      "observation": "A receipt confirms that Ada Vance signed the seal out for inspection. Halloran's signature appears as a witness, not a recipient.",
       "source_event": "theft"
     },
     {
       "id": "glove",
       "location": "hall",
-      "observation": "A single glove, still damp.",
+      "observation": "Inside a damp riding glove embroidered A.V. is a torn velvet thread matching the seal's display cushion. The glove was discarded near the side door.",
       "source_event": "departure"
     }
   ],
@@ -63,26 +63,27 @@
     {
       "id": "porter-heard-arguing",
       "witness": "porter",
-      "statement": "I heard raised voices in the study before the seal went missing."
+      "statement": "I heard Halloran and Ada arguing about the seal. Halloran insisted it should never leave the house."
     },
     {
       "id": "porter-saw-receipt",
       "witness": "porter",
-      "statement": "There is a receipt on the desk that you should look at.",
+      "statement": "Both names are on the desk receipt, but only one person signed it out. Look closely.",
       "points_to": "receipt"
     },
     {
       "id": "maid-saw-glove",
       "witness": "maid",
-      "statement": "Someone dropped a glove in the hall and did not come back for it.",
+      "statement": "Ada hurried through the hall with her riding gloves. I found one beside the side door after she left.",
       "points_to": "glove"
     }
   ],
   "solution": {
     "culprit": "ada",
-    "explanation": "Ada signed for the seal and carried it out.",
+    "explanation": "Ada signed the seal out and concealed it in her riding glove before leaving by the side door.",
     "supporting_evidence": [
-      "receipt"
+      "receipt",
+      "glove"
     ]
   }
 }
