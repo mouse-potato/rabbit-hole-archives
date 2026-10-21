@@ -92,6 +92,16 @@ class DemoGame:
                 view=build_packet(self.actor.world, self.character).view,
                 outcome=NarrationOutcome(action="", accepted=False, detail="Command is too long."),
             ))
+        # Once solved, the investigation is immutable from the player's perspective.
+        # Enforce this on the server, not only through disabled browser controls.
+        if build_packet(self.actor.world, self.character).view.solved:
+            return self.packet(NarrationPacket(
+                view=build_packet(self.actor.world, self.character).view,
+                outcome=NarrationOutcome(
+                    action="", accepted=False,
+                    detail="This case is closed. Start a new investigation to act again.",
+                ),
+            ))
         normalized = re.sub(r"[^a-z0-9\s-]", " ", text.lower())
         normalized = " ".join(normalized.split())
         movement = re.fullmatch(
