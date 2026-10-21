@@ -28,9 +28,9 @@ def inquiry(text: str, packet: dict[str, Any]) -> str | None:
     # A polite request containing an executable verb is still an action.
     # In particular, do not steal "could you ask Quill" or
     # "can I go to the hall" from the existing AI interpreter.
-    if re.match(r"^(?:can|could|would|will|may|should)\\b", normalized) and re.search(
-        r"\\b(?:go|travel|walk|move|enter|visit|ask|talk|speak|interview|question|"
-        r"examine|inspect|look at|accuse|charge)\\b",
+    if re.match(r"^(?:can|could|would|will|may|should)\b", normalized) and re.search(
+        r"\b(?:go|travel|walk|move|enter|visit|ask|talk|speak|interview|question|"
+        r"examine|inspect|look at|accuse|charge)\b",
         normalized,
     ):
         return None
