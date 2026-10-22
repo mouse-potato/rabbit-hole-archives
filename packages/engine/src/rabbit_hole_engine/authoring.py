@@ -24,6 +24,7 @@ class AuthoredModel(BaseModel):
 class Location(AuthoredModel):
     id: Identifier
     name: Text
+    description: Text | None = None
 
 
 class HistoricalEvent(AuthoredModel):
@@ -47,6 +48,7 @@ class Witness(AuthoredModel):
     id: Identifier
     name: Text
     location: Identifier
+    appearance: Text | None = None
 
 
 class Testimony(AuthoredModel):
