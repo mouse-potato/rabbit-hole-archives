@@ -190,14 +190,14 @@ def inquiry(text: str, packet: dict[str, Any]) -> str | None:
     # Descriptions may answer only for people visible in the current packet.
     # No facts about distant witnesses or sealed case details are projected.
     appearance = bool(re.search(
-        r"\\b(?:look like|appearance|describe|wearing|dressed)\\b", normalized,
+        r"\b(?:look like|appearance|describe|wearing|dressed)\b", normalized,
     ))
     if appearance:
         for witness in view.get("witnesses", []):
             name = str(witness["name"]).lower()
             key = str(witness["witness_key"])
             aliases = {key, name, *name.split()}
-            if any(re.search(r"\\b" + re.escape(alias) + r"\\b", normalized)
+            if any(re.search(r"\b" + re.escape(alias) + r"\b", normalized)
                    for alias in aliases):
                 description = packet.get("witness_descriptions", {}).get(key)
                 if description:
