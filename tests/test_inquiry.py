@@ -171,3 +171,53 @@ def test_visible_evidence_phrasing_survives_model_outage(
     result = game.act("I'd like to look at the receipt first")
     assert result["outcome"]["accepted"] is True
     assert len(result["view"]["discovered"]) == 1
+
+
+@pytest.mark.parametrize(("player_text", "action"), [
+    ("let's talk to the porter", "talk"),
+    ("Ask Quill what he heard.", "talk"),
+    ("I accuse Ada Vance.", "accuse"),
+    ("I would like to accuse Ada Vance.", "accuse"),
+    ("I want to accuse Ada.", "accuse"),
+    ("Can I go to the hall?", "move"),
+])
+def test_transcript_action_phrasing_without_model(
+    player_text: str, action: str,
+) -> None:
+    game = DemoGame()
+    result = game.act(player_text)
+    assert result["outcome"]["accepted"] is True
+    assert result["outcome"]["action"] != "inquire"
+    if action == "talk":
+        assert result["view"]["heard"]
+    elif action == "move":
+        assert result["view"]["place_key"] == "hall"
+    else:
+        assert result["outcome"]["verdict"] == "unproven"
+
+
+def test_model_outage_does_not_block_clear_accusation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(LocalAI, "_ask", lambda *_args: None)
+    game = DemoGame(ai=LocalAI(model="offline"))
+    result = game.act("I accuse Ada Vance.")
+    assert result["outcome"]["accepted"] is True
+    assert result["outcome"]["verdict"] == "unproven"
+
+
+def test_testimony_question_does_not_echo_unrelated_observation() -> None:
+    game = DemoGame()
+    game.act("examine receipt")
+    result = game.act("does Quill know anything about the receipt?")
+    assert result["outcome"]["action"] == "inquire"
+    assert "ask an available witness" in result["outcome"]["detail"]
+    assert "signed the seal out" not in result["outcome"]["detail"]
+    assert not result["view"]["heard"]
+
+
+def test_where_am_i_with_typo_still_reports_location() -> None:
+    game = DemoGame()
+    result = game.act("where am I right nw")
+    assert result["outcome"]["action"] == "inquire"
+    assert "study" in result["outcome"]["detail"].lower()
