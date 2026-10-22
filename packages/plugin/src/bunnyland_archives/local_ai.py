@@ -96,7 +96,51 @@ _SCENE_BEATS = {
 }
 
 
-def trusted_narration(packet: dict[str, Any], tone: str = "neutral") -> str:
+# Second and third reviewed variations deliberately describe no new evidence.
+# A local turn counter selects the variation; the model cannot author facts.
+_ALTERNATE_SCENE_BEATS = {
+    "study": {
+        "move": (
+            "The study seems determined to keep its secrets in plain sight.",
+            "Your attention returns to the work waiting on the desk.",
+        ),
+        "examine": (
+            "One more careful look brings the paperwork into focus.",
+            "The desk yields only what close attention can establish.",
+        ),
+        "talk": (
+            "A question unsettles the study's heavy quiet.",
+            "The conversation adds another voice to the casebook.",
+        ),
+        "accuse": (
+            "In the study, a theory finally takes the shape of an accusation.",
+            "The evidence, not the silence, must answer the charge.",
+        ),
+    },
+    "hall": {
+        "move": (
+            "The side door draws the eye along the corridor.",
+            "Here, the route through the house becomes part of the inquiry.",
+        ),
+        "examine": (
+            "The hall offers something worth examining closely.",
+            "The passage rewards attention rather than haste.",
+        ),
+        "talk": (
+            "A question echoes through the passage before an answer arrives.",
+            "Another account joins the investigation in the hall.",
+        ),
+        "accuse": (
+            "The charge lands beneath the quiet of the corridor.",
+            "The hall offers no verdict of its own.",
+        ),
+    },
+}
+
+
+def trusted_narration(
+    packet: dict[str, Any], tone: str = "neutral", *, variation: int = 0,
+) -> str:
     """Compose atmosphere from reviewed strings and a public action outcome.
 
     No model output is rendered directly. The same prose works when offline.
@@ -126,6 +170,10 @@ def trusted_narration(packet: dict[str, Any], tone: str = "neutral") -> str:
     view = packet.get("view", {})
     place_key = str(view.get("place_key", "")) if isinstance(view, dict) else ""
     beat = _SCENE_BEATS.get(place_key, {}).get(kind, "")
+    if variation > 0 and beat:
+        options = _ALTERNATE_SCENE_BEATS.get(place_key, {}).get(kind, ())
+        if options:
+            beat = options[(variation - 1) % len(options)]
     return f"{frame} {beat}".strip()
 
 
@@ -212,7 +260,7 @@ class LocalAI:
         self._debug("intent", "validated_action")
         return f"{selected[0]} {selected[1]}"
 
-    def narrate(self, packet: dict[str, Any]) -> str:
+    def narrate(self, packet: dict[str, Any], *, variation: int = 0) -> str:
         """Model chooses a tone; trusted templates supply every actual word."""
         outcome = packet.get("outcome")
         if not isinstance(outcome, dict):
@@ -236,4 +284,4 @@ class LocalAI:
         if not isinstance(tone, str) or tone not in _TONES:
             self._debug("narration", "invalid_tone_using_neutral")
             tone = "neutral"
-        return trusted_narration(packet, tone)
+        return trusted_narration(packet, tone, variation=variation)
