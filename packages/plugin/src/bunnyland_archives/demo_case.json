@@ -6,11 +6,13 @@
   "locations": [
     {
       "id": "study",
-      "name": "The Study"
+      "name": "The Study",
+      "description": "The study is hushed. An empty place on the display cushion makes the missing seal impossible to ignore. A desk holds paperwork that might reward closer inspection."
     },
     {
       "id": "hall",
-      "name": "The Hall"
+      "name": "The Hall",
+      "description": "The narrow hall connects the study to a side door. Footsteps would carry clearly through this passage, and the door offers a route out of the house."
     }
   ],
   "events": [
@@ -51,12 +53,14 @@
     {
       "id": "porter",
       "name": "Porter Quill",
-      "location": "study"
+      "location": "study",
+      "appearance": "Porter Quill wears a neatly buttoned dark waistcoat. He stands close to the study doorway, with his hands folded in front of him."
     },
     {
       "id": "maid",
       "name": "Maid Rosalind",
-      "location": "hall"
+      "location": "hall",
+      "appearance": "Maid Rosalind wears a practical apron over her work clothes. She keeps to the hall near the side door."
     }
   ],
   "testimony": [
