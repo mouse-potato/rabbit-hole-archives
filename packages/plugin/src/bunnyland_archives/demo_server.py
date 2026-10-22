@@ -45,7 +45,7 @@ from . import (
     perform,
     resolve_intent,
 )
-from .inquiry import SCENES, evidence_command, inquiry
+from .inquiry import SCENES, conversational_command, evidence_command, inquiry
 from .local_ai import LocalAI, ollama_chat_endpoint
 
 WEB_ROOT = Path(__file__).resolve().parents[4] / "web"
@@ -156,6 +156,8 @@ class DemoGame:
         # Reliable, narrowly scoped offline interpretation for visible evidence.
         # This also works when Ollama returns no usable proposal.
         recognized = evidence_command(text, public["options"])
+        if recognized is None:
+            recognized = conversational_command(text, self._ai_options())
         if recognized is not None:
             text = recognized
         # A model may suggest a public option but cannot execute arbitrary commands.
