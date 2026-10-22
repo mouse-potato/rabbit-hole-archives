@@ -138,6 +138,23 @@ _ALTERNATE_SCENE_BEATS = {
 }
 
 
+
+
+# The player's described demeanor is not evidence and cannot change NPC
+# testimony. Only explicitly named styles add a reviewed narrative cue.
+_APPROACH_CUES = (
+    (("cautiously", "carefully", "warily", "hesitantly"), "You choose your words with care."),
+    (("gently", "softly", "kindly", "politely"), "You keep your voice gentle."),
+    (("firmly", "sternly", "directly", "bluntly"), "You make the question plain and direct."),
+)
+
+
+def approach_cue(player_text: str) -> str:
+    """Cosmetic, reviewed response to explicitly stated player demeanor."""
+    words = set(re.findall(r"[a-z]+", player_text.casefold()))
+    matches = [line for terms, line in _APPROACH_CUES if words.intersection(terms)]
+    return matches[0] if len(matches) == 1 else ""
+
 def trusted_narration(
     packet: dict[str, Any], tone: str = "neutral", *, variation: int = 0,
 ) -> str:
