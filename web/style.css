@@ -34,6 +34,12 @@ button:disabled { opacity: .6; cursor: wait; }
 .command input { flex: 1; }
 .action-list { list-style: none; display: flex; flex-wrap: wrap; gap: .5rem; padding: 0; margin: .5rem 0 1.4rem; }
 .action-list li { margin: 0; }
+.scene-presence { margin: 1rem 0; padding: .8rem 1rem; border: 1px solid #806b91; border-radius: 6px; background: #292135; }
+.scene-presence h4 { margin-top: 0; }
+.scene-person { padding: .3rem 0; }
+.scene-person + .scene-person { border-top: 1px solid #62516f; }
+.scene-person p { margin: .25rem 0; }
+.scene-person-name { font-weight: 700; color: #e2bde9; }
 .hint { color: #d7bbdf; }
 .success { border-left: 3px solid #d9bd8b; padding-left: .8rem; }
 .casebook-entry { border: 0; border-left: 2px solid #806b91; border-radius: 0; background: #292135; padding: .25rem .8rem; margin: .5rem 0 1rem; }
