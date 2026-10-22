@@ -1,8 +1,8 @@
 """Authoring-to-ECS proof for optional public descriptive text."""
 from __future__ import annotations
 
-from copy import deepcopy
 import json
+from copy import deepcopy
 
 import pytest
 from bunnyland.core import (
