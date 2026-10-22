@@ -278,17 +278,17 @@ class DemoGame:
             self.actor.world, self.character, result,
             action=resolved.command_type or "",
         )
-        outcome = narration_packet.outcome
-        if outcome is not None and outcome.accepted and "talk" in outcome.action:
+        interview_outcome = narration_packet.outcome
+        if interview_outcome is not None and interview_outcome.accepted and "talk" in interview_outcome.action:
             witness_key = resolved.target_key
             if witness_key is not None:
                 heard = narration_packet.view.model_dump(mode="json")
                 selected = focused_interview(original_text, witness_key, heard)
                 if selected is not None:
                     if selected:
-                        revised = outcome.model_copy(update={"statements": selected})
+                        revised = interview_outcome.model_copy(update={"statements": selected})
                     else:
-                        revised = outcome.model_copy(update={
+                        revised = interview_outcome.model_copy(update={
                             "statements": (),
                             "detail": "The witness's recorded account does not address that topic.",
                         })
