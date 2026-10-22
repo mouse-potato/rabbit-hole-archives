@@ -11,9 +11,18 @@ let busy = false;
 let solvedAnnounced = false;
 let caseTitle = "Rabbit Hole Archives";
 const transcript = $("transcript");
+const transcriptScroll = $("transcript-scroll");
 function entry(message) {
-  const item = element("li", message, transcript);
-  item.scrollIntoView({ block: "nearest", behavior: "auto" });
+  // Only follow new entries when the player was already reading the end.
+  // Never pull the entire page away from the command input or casebook.
+  const atLatest = transcriptScroll.scrollHeight - transcriptScroll.scrollTop -
+    transcriptScroll.clientHeight <= 48;
+  element("li", message, transcript);
+  if (atLatest) transcriptScroll.scrollTop = transcriptScroll.scrollHeight;
+}
+function announceResult(message) {
+  // A compact announcement avoids re-reading the entire growing transcript.
+  say($("transcript-update"), message);
 }
 async function request(path, options = {}) {
   const response = await fetch(path, {
@@ -39,6 +48,7 @@ async function act(text) {
     renderPacket(packet);
   } catch (error) {
     entry("Unable to act: " + error.message);
+    announceResult("Unable to act: " + error.message);
   } finally {
     busy = false;
     const closed = Boolean($("scene").querySelector(".success"));
@@ -132,6 +142,7 @@ function renderPacket(packet) {
         outcome.verdict === "unproven" ? "Accusation unproven. Your evidence does not establish the case." : ""
     ].filter(Boolean).join("\n");
     entry(result);
+    announceResult(result);
   }
 }
 async function connect() {
@@ -148,6 +159,10 @@ async function connect() {
   }
 }
 $("connect").addEventListener("click", connect);
+$("latest-transcript").addEventListener("click", () => {
+  transcriptScroll.scrollTop = transcriptScroll.scrollHeight;
+  announceResult("Showing the latest investigation messages.");
+});
 $("export-transcript").addEventListener("click", () => {
   const lines = Array.from(transcript.querySelectorAll("li"), (item, index) =>
     String(index + 1) + ". " + item.textContent.trim());
