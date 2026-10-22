@@ -160,6 +160,15 @@ class DemoGame:
             recognized = conversational_command(text, self._ai_options())
         if recognized is not None:
             text = recognized
+        elif re.search(r"\\b(?:accuse|accusing|charge|blame)\\b", text.lower()):
+            # Do not let inference silently substitute a different suspect.
+            return self.packet(NarrationPacket(
+                view=build_packet(self.actor.world, self.character).view,
+                outcome=NarrationOutcome(
+                    action="accuse", accepted=False,
+                    detail="That person is not among the listed suspects.",
+                ),
+            ), narrate=True)
         # A model may suggest a public option but cannot execute arbitrary commands.
         # Known deterministic inputs continue to run without inference.
         # Preserve the existing reliable parser, especially button commands.
