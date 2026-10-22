@@ -6,6 +6,8 @@ only a proposed public action and a narration tone, never trusted game facts.
 from __future__ import annotations
 
 import json
+import os
+import sys
 from dataclasses import dataclass
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -75,6 +77,58 @@ _CLOSED = {
 }
 
 
+
+# Authored atmospheric beats, independent of the inference service. They do
+# not add clues, physical details, NPC knowledge, or speculation as fact.
+_SCENE_BEATS = {
+    "study": {
+        "move": "The desk waits in uneasy silence beneath the absence of the seal.",
+        "examine": "Among the study's paperwork, small details demand a second look.",
+        "talk": "In the quiet study, a witness's words seem to carry further.",
+        "accuse": "The accusation hangs in the hush of the study.",
+    },
+    "hall": {
+        "move": "The passage leads toward the side door; there is still more to examine.",
+        "examine": "Near the side door, the smallest detail might change the case.",
+        "talk": "In the hall, every recollection points back to someone's movements.",
+        "accuse": "Your accusation interrupts the stillness of the hall.",
+    },
+}
+
+
+def trusted_narration(packet: dict[str, Any], tone: str = "neutral") -> str:
+    """Compose atmosphere from reviewed strings and a public action outcome.
+
+    No model output is rendered directly. The same prose works when offline.
+    """
+    outcome = packet.get("outcome")
+    if not isinstance(outcome, dict):
+        return ""
+    if tone not in _TONES:
+        tone = "neutral"
+    if not outcome.get("accepted"):
+        return _REJECTED[tone]
+    if outcome.get("verdict") == "solved":
+        return _CLOSED[tone]
+    action = str(outcome.get("action", ""))
+    kind = ""
+    if action == "move":
+        kind = "move"
+    elif "examine" in action:
+        kind = "examine"
+    elif "talk" in action or "witness" in action:
+        kind = "talk"
+    elif "accuse" in action:
+        kind = "accuse"
+    if not kind:
+        return "You consider what you have learned."
+    frame = _FRAMES[kind][tone]
+    view = packet.get("view", {})
+    place_key = str(view.get("place_key", "")) if isinstance(view, dict) else ""
+    beat = _SCENE_BEATS.get(place_key, {}).get(kind, "")
+    return f"{frame} {beat}".strip()
+
+
 @dataclass(frozen=True)
 class LocalAI:
     """One local inference backend, enabled by RHA_OLLAMA_MODEL."""
@@ -82,6 +136,11 @@ class LocalAI:
     model: str
     timeout: float = 8.0
     endpoint: str = "http://127.0.0.1:11434/api/chat"
+
+    def _debug(self, category: str, status: str) -> None:
+        """Opt-in local diagnostic; never print prompts, responses, or case data."""
+        if os.environ.get("RHA_AI_DEBUG", "").lower() in {"1", "true", "yes"}:
+            print(f"[RHA AI] {category}: {status}", file=sys.stderr)
 
     def _ask(self, system: str, payload: dict[str, Any]) -> dict[str, Any] | None:
         # Only the trusted server operator configures the backend endpoint.
@@ -100,12 +159,21 @@ class LocalAI:
             self.endpoint, data=body, method="POST",
             headers={"Content-Type": "application/json"},
         )
+        kind = "intent" if "choices" in payload else "narration"
         try:
             with urlopen(request, timeout=self.timeout) as response:
                 result = json.load(response)
             answer = json.loads(result["message"]["content"])
-            return answer if isinstance(answer, dict) else None
-        except (OSError, URLError, HTTPError, ValueError, KeyError, TypeError):
+            if not isinstance(answer, dict):
+                self._debug(kind, "invalid_json_shape")
+                return None
+            self._debug(kind, "model_response_received")
+            return answer
+        except (OSError, URLError, HTTPError):
+            self._debug(kind, "connection_or_timeout_failure")
+            return None
+        except (ValueError, KeyError, TypeError):
+            self._debug(kind, "invalid_model_response")
             return None
 
     def propose(self, text: str, options: dict[str, Any]) -> str | None:
@@ -133,11 +201,15 @@ class LocalAI:
             return None
         selected = (response.get("action"), response.get("target"))
         if not all(isinstance(value, str) for value in selected):
+            self._debug("intent", "no_valid_action")
             return None
         if selected[0] not in _ALLOWED_ACTIONS:
+            self._debug("intent", "unrecognized_action")
             return None
         if not any((choice["action"], choice["target"]) == selected for choice in choices):
+            self._debug("intent", "target_not_available")
             return None
+        self._debug("intent", "validated_action")
         return f"{selected[0]} {selected[1]}"
 
     def narrate(self, packet: dict[str, Any]) -> str:
@@ -162,18 +234,6 @@ class LocalAI:
         )
         tone = response.get("tone") if response else None
         if not isinstance(tone, str) or tone not in _TONES:
+            self._debug("narration", "invalid_tone_using_neutral")
             tone = "neutral"
-        if not outcome.get("accepted"):
-            return _REJECTED[tone]
-        if outcome.get("verdict") == "solved":
-            return _CLOSED[tone]
-        action = str(outcome.get("action", ""))
-        if action == "move":
-            return _FRAMES["move"][tone]
-        if "examine" in action:
-            return _FRAMES["examine"][tone]
-        if "talk" in action or "witness" in action:
-            return _FRAMES["talk"][tone]
-        if "accuse" in action:
-            return _FRAMES["accuse"][tone]
-        return "You consider what you have learned."
+        return trusted_narration(packet, tone)

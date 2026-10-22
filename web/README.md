@@ -25,7 +25,7 @@ You can use the accessible action buttons or type commands:
 You can also ask read-only questions such as `what's in the hall?`,
 `look around`, `what do I know?`, or `review my evidence`.
 Scene inquiries describe only the current location and visible targets; casebook
-inquiries repeat only recorded observations and statements. Questions about
+inquiries repeat only recorded observations and statements. After you interview a\nwitness, try `what did Quill say about the receipt?` or `what did Rosalind\nsay about the glove?` to revisit matching testimony. This reads the existing\ncasebook and never generates new claims from an NPC. Questions about
 unknown or sealed details return an uncertainty response rather than invented
 answers. Inquiry does not move the player or discover new evidence, and works
 without Ollama.
@@ -77,8 +77,10 @@ unavailable, or malformed model responses fall back to the deterministic
 parser and can be rejected. Ordinary known commands keep their deterministic
 behavior. This is **not** freeform, topic-specific NPC dialogue yet.
 
-The local model can also select a tone for one short Narrator line; that line
-comes from fixed, trusted templates. All actual observations, testimony, and
+The Narrator now combines tone with an **authored, scene-specific atmospheric
+beat** for travel, inspection, witness interviews and accusations. These beats
+also work without Ollama. When AI is configured, the model may select the
+tone; it cannot write the final line. All actual observations, testimony, and
 verdicts continue to come from the game engine. We deliberately do not allow
 the model to invent facts or produce unrestricted narrative prose in this
 first slice. Model calls are synchronous and may delay actions when the local
@@ -103,6 +105,25 @@ latest** and confirm the newest entry is visible without moving keyboard focus
 away from the button. Confirm result announcements are concise and the exported
 file remains in chronological order. Perform browser/AT testing before treating
 this feature as accessibility-verified.
+
+### Troubleshooting optional AI
+
+To see *why* the optional local model did not help with a request, enable
+server-console diagnostics before launching the demo:
+
+```powershell
+$env:RHA_AI_DEBUG = "1"
+uv run python -m bunnyland_archives.demo_server
+```
+
+The server prints small status labels such as `intent: validated_action`,
+`intent: target_not_available`, `intent: connection_or_timeout_failure`,
+`intent: invalid_model_response`, or `narration: invalid_tone_using_neutral`.
+Logs deliberately omit the player request, generated text, evidence, model
+response body, and server URL. They are emitted **only to the server console**,
+not sent to the browser. This opt-in is intended for development; unset
+`RHA_AI_DEBUG` when finished. If there is no diagnostic for an action, it may
+have been handled deterministically without an Ollama call.
 
 ## Verify locally
 

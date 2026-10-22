@@ -97,6 +97,70 @@ def conversational_command(text: str, options: dict[str, Any]) -> str | None:
     return None
 
 
+
+_TOPIC_STOPWORDS = frozenset({
+    "what", "did", "does", "do", "know", "think", "say", "said", "heard", "hear",
+    "about", "anything", "something", "the", "a", "an", "of", "to",
+    "from", "me", "you", "he", "she", "they", "his", "her", "their",
+    "witness", "tell", "could",
+    "would", "is", "was", "there", "on", "with",
+})
+
+
+def testimony_inquiry(text: str, view: dict[str, Any]) -> str | None:
+    """Answer a witness-knowledge question using only testimony already heard.
+
+    A witness's identity must be resolvable from the player's current public
+    view or the key attached to previously recorded testimony.
+    """
+    normalized = _clean(text)
+    if not (
+        re.match(r"^(?:what|did|does|has|had|who|how)\b", normalized)
+        and re.search(r"\b(?:know|say|said|heard|hear|tell|mention)\b", normalized)
+    ):
+        return None
+
+    names: dict[str, set[str]] = {}
+    for witness in view.get("witnesses", []):
+        key = str(witness["witness_key"])
+        full_name = str(witness["name"]).lower()
+        names[key] = {key, full_name, *full_name.split()}
+    for statement in view.get("heard", []):
+        key = str(statement["witness_key"])
+        names.setdefault(key, {key})
+
+    identified = [
+        key for key, aliases in names.items()
+        if any(re.search(r"\b" + re.escape(alias) + r"\b", normalized) for alias in aliases)
+    ]
+    if len(identified) != 1:
+        return None
+
+    witness_key = identified[0]
+    statements = [
+        item for item in view.get("heard", [])
+        if item["witness_key"] == witness_key
+    ]
+    if not statements:
+        return "You have not recorded any testimony from that witness yet."
+
+    topics = set(normalized.split()) - _TOPIC_STOPWORDS
+    for alias in names[witness_key]:
+        topics.difference_update(alias.split())
+    if not topics:
+        selected = statements
+    else:
+        selected = [
+            item for item in statements
+            if topics.intersection(_clean(str(item["statement"])).split())
+            or topics.intersection(_clean(str(item.get("lead_evidence_key") or "")).split())
+        ]
+    if not selected:
+        return "Your recorded testimony from that witness does not address that topic."
+    return "Your casebook records the witness saying: " + " ".join(
+        f'“{item["statement"]}”' for item in selected
+    )
+
 def inquiry(text: str, packet: dict[str, Any]) -> str | None:
     """Return an answer for supported questions; None for gameplay commands.
 
@@ -146,6 +210,10 @@ def inquiry(text: str, packet: dict[str, Any]) -> str | None:
         summary = [f"{item['label']}: {item['observation']}" for item in discovered]
         summary.extend(str(item["statement"]) for item in heard)
         return "Your casebook records: " + " ".join(summary)
+
+    remembered = testimony_inquiry(text, view)
+    if remembered is not None:
+        return remembered
 
     if re.match(r"^(?:where|what)\b", normalized) and re.search(
         r"\b(?:am i|room am i|location|right now)\b", normalized

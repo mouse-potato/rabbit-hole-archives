@@ -46,7 +46,7 @@ from . import (
     resolve_intent,
 )
 from .inquiry import SCENES, conversational_command, evidence_command, inquiry
-from .local_ai import LocalAI, ollama_chat_endpoint
+from .local_ai import LocalAI, ollama_chat_endpoint, trusted_narration
 
 WEB_ROOT = Path(__file__).resolve().parents[4] / "web"
 CASE_PATH = Path(__file__).with_name("demo_case.json")
@@ -115,8 +115,10 @@ class DemoGame:
         safe["options"] = self._options()
         safe["scene_description"] = SCENES.get(str(safe["view"]["place_key"]), "")
         safe["ai_enabled"] = self.ai is not None
-        if narrate and self.ai is not None:
-            safe["narration"] = self.ai.narrate(safe)
+        if narrate:
+            safe["narration"] = (
+                self.ai.narrate(safe) if self.ai is not None else trusted_narration(safe)
+            )
         return safe
 
     def _ai_options(self) -> dict[str, Any]:
