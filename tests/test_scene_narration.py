@@ -4,7 +4,6 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-
 from bunnyland_archives.demo_server import DemoGame
 from bunnyland_archives.local_ai import LocalAI, trusted_narration
 
