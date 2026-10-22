@@ -37,11 +37,8 @@ def test_approach_does_not_change_evidence_actions() -> None:
     game = DemoGame()
     response = game.act("carefully examine receipt")
     assert "You choose your words with care." not in response.get("narration", "")
-    assert response["view"]["discovered"] in ([], [{
-        "evidence_key": "receipt",
-        "label": "receipt",
-        "observation": "A receipt confirms that Ada Vance signed the seal out for inspection. Halloran's signature appears as a witness, not a recipient.",
-    }])
+    assert response["outcome"]["accepted"] is True
+    assert len(response["view"]["discovered"]) == 1
 
 
 def test_ambiguous_or_absent_approach_defaults_to_neutral() -> None:
