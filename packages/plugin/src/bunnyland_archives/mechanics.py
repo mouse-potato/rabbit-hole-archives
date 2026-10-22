@@ -232,7 +232,9 @@ class AccusationResolvedEvent(DomainEvent):
     missing_evidence: tuple[str, ...]
 
 
-def _testimony_for(ctx: HandlerContext, witness_key: str) -> list[ArchiveTestimonyComponent]:
+def _testimony_for(
+    ctx: HandlerContext, case_key: str, witness_key: str,
+) -> list[ArchiveTestimonyComponent]:
     statements = [
         entity.get_component(ArchiveTestimonyComponent)
         for entity in ctx.world.query()
@@ -240,7 +242,8 @@ def _testimony_for(ctx: HandlerContext, witness_key: str) -> list[ArchiveTestimo
         .execute_entities()
     ]
     return sorted(
-        (item for item in statements if item.witness_key == witness_key),
+        (item for item in statements
+         if item.case_key == case_key and item.witness_key == witness_key),
         key=lambda item: item.order,
     )
 
@@ -331,7 +334,7 @@ class TalkToWitnessHandler:
         if session.case_key != witness.case_key:
             return rejected("that witness belongs to a different case")
 
-        statements = _testimony_for(ctx, witness.witness_key)
+        statements = _testimony_for(ctx, witness.case_key, witness.witness_key)
         recorded = _existing_conversation(
             ctx,
             case_key=witness.case_key,
@@ -475,4 +478,5 @@ class AccuseSuspectHandler:
             ),
             event,
         )
+
 

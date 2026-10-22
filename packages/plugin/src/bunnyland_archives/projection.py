@@ -182,7 +182,8 @@ def narrator_view(world: World, character_id: EntityId | str) -> ArchiveNarrator
             lead_evidence_key=item.points_to_key,
         )
         for item in sorted(
-            (item for item in statements if item.witness_key in heard_witnesses),
+            (item for item in statements
+             if item.case_key == case_key and item.witness_key in heard_witnesses),
             key=lambda item: (item.witness_key, item.order),
         )
     )
@@ -217,3 +218,4 @@ __all__ = [
     "WitnessPresentView",
     "narrator_view",
 ]
+
