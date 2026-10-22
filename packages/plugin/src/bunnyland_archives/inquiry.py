@@ -160,7 +160,7 @@ def inquiry(text: str, packet: dict[str, Any]) -> str | None:
     if question:
         # Do not answer a question about a witness by returning an unrelated
         # observation just because it mentions the same evidence.
-        if re.search(r"\b(?:know|heard|said|think|tell|believe)\b", normalized):
+        if re.search(r"\b(?:know|heard|said|think|believe)\b", normalized):
             return "You can ask an available witness directly, or review testimony in your casebook."
         for clue in view.get("discovered", []):
             label = str(clue.get("label", "")).lower()
