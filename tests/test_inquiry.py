@@ -217,7 +217,7 @@ def test_testimony_question_does_not_echo_unrelated_observation() -> None:
     game.act("examine receipt")
     result = game.act("does Quill know anything about the receipt?")
     assert result["outcome"]["action"] == "inquire"
-    assert "ask an available witness" in result["outcome"]["detail"]
+    assert "not recorded any testimony" in result["outcome"]["detail"]
     assert "signed the seal out" not in result["outcome"]["detail"]
     assert not result["view"]["heard"]
 
