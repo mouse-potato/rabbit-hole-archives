@@ -60,6 +60,40 @@ def evidence_command(text: str, options: dict[str, Any]) -> str | None:
     return None
 
 
+
+def conversational_command(text: str, options: dict[str, Any]) -> str | None:
+    """Normalize explicit player intentions to known public commands.
+
+    Never infer an action merely from mentioning a person's name. Only the
+    requested action category and uniquely matched available target may pass.
+    """
+    normalized = _clean(text)
+    action: tuple[str, str] | None = None
+    if re.search(r"\b(?:accuse|accusing|charge|blame)\b", normalized):
+        action = ("accuse", "suspects")
+    elif re.search(r"\b(?:talk to|speak to|interview|ask|question)\b", normalized):
+        action = ("talk to", "witnesses")
+    elif re.search(r"\b(?:go to|travel to|walk to|enter|visit)\b", normalized):
+        action = ("go to", "places")
+    if action is None:
+        return None
+    verb, group = action
+    matched: list[str] = []
+    for item in options.get(group, []):
+        key = str(item["key"])
+        names = {key.replace("-", " "), str(item["name"]).lower()}
+        for name in names:
+            # "Porter Quill" may be addressed as either "Porter" or "Quill".
+            aliases = {name}
+            if group == "witnesses":
+                aliases.update(name.split())
+            if any(re.search(r"\b" + re.escape(alias) + r"\b", normalized) for alias in aliases):
+                matched.append(key)
+                break
+    if len(matched) == 1:
+        return verb + " " + matched[0]
+    return None
+
 def inquiry(text: str, packet: dict[str, Any]) -> str | None:
     """Return an answer for supported questions; None for gameplay commands.
 
@@ -70,11 +104,11 @@ def inquiry(text: str, packet: dict[str, Any]) -> str | None:
     # A polite request containing an executable verb is still an action.
     # In particular, do not steal "could you ask Quill" or
     # "can I go to the hall" from the existing AI interpreter.
-    if re.match(r"^(?:can|could|would|will|may|should)\b", normalized) and re.search(
+    if re.search(
         r"\b(?:go|travel|walk|move|enter|visit|ask|talk|speak|interview|question|"
         r"examine|inspect|look at|accuse|charge)\b",
         normalized,
-    ):
+    ) and re.search(r"\b(?:can|could|would|will|may|should|i|let|please|want)\b", normalized):
         return None
     view = packet["view"]
     options = packet["options"]
@@ -110,6 +144,10 @@ def inquiry(text: str, packet: dict[str, Any]) -> str | None:
         summary.extend(str(item["statement"]) for item in heard)
         return "Your casebook records: " + " ".join(summary)
 
+    if re.match(r"^(?:where|what)\b", normalized) and re.search(
+        r"\b(?:am i|room am i|location|right now)\b", normalized
+    ):
+        return SCENES.get(current, f"You are in {current_name}.")
     question = bool(
         re.match(
             r"^(?:who|what|where|when|why|how|does|did|can|could|is|was|tell me about)\b",
@@ -117,6 +155,10 @@ def inquiry(text: str, packet: dict[str, Any]) -> str | None:
         )
     )
     if question:
+        # Do not answer a question about a witness by returning an unrelated
+        # observation just because it mentions the same evidence.
+        if re.search(r"\b(?:know|heard|said|think|tell|believe)\b", normalized):
+            return "You can ask an available witness directly, or review testimony in your casebook."
         for clue in view.get("discovered", []):
             label = str(clue.get("label", "")).lower()
             if label and re.search(r"\b" + re.escape(label) + r"\b", normalized):
