@@ -88,6 +88,22 @@ The AI tests use mocked model replies and run with no Ollama installation.
 Run `uv run pytest tests/test_local_ai.py` and the full existing test suite
 before merging.
 
+## Transcript navigation
+
+The in-page transcript keeps chronological order for reading and exported files.
+It sits in a separate, keyboard-focusable scroll area; use **Jump to latest** to
+return to the newest messages. New entries follow automatically only while
+you're already reading the end of the transcript. Reviewing older entries
+doesn't move your scroll position.
+
+For a manual keyboard and screen-reader check: tab to the transcript region,
+scroll it with the keyboard, submit another command while reviewing older
+messages, and confirm the scroll position is preserved. Activate **Jump to
+latest** and confirm the newest entry is visible without moving keyboard focus
+away from the button. Confirm result announcements are concise and the exported
+file remains in chronological order. Perform browser/AT testing before treating
+this feature as accessibility-verified.
+
 ## Verify locally
 
 ```sh
