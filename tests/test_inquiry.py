@@ -85,9 +85,15 @@ def test_model_cannot_reinterpret_scene_question_as_move(
     assert requests == []
 
 
-def test_unsupported_open_ended_question_never_becomes_accusation() -> None:
+@pytest.mark.parametrize("player_text", [
+    "tell me about Ada",
+    "tell me about Porter Quill",
+])
+def test_unsupported_open_ended_question_never_becomes_accusation(
+    player_text: str,
+) -> None:
     game = DemoGame()
-    response = game.act("tell me about Ada")
+    response = game.act(player_text)
     assert response["outcome"]["action"] == "inquire"
     assert "does not establish" in response["outcome"]["detail"]
     assert response["view"]["solved"] is False
