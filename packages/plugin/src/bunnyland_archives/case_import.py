@@ -99,7 +99,10 @@ def import_case(world: World, case: CaseDefinition) -> ImportedCase:
             world,
             [
                 RoomComponent(title=location.name),
-                ArchivePlaceComponent(place_key=location.id, name=location.name),
+                ArchivePlaceComponent(
+                    place_key=location.id, name=location.name,
+                    description=location.description,
+                ),
             ],
         )
         places[location.id] = place.id
@@ -152,6 +155,7 @@ def import_case(world: World, case: CaseDefinition) -> ImportedCase:
                     witness_key=witness.id,
                     name=witness.name,
                     place_key=witness.location,
+                    appearance=witness.appearance,
                 ),
             ],
         )
