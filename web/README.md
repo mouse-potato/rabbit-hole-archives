@@ -88,6 +88,26 @@ The AI tests use mocked model replies and run with no Ollama installation.
 Run `uv run pytest tests/test_local_ai.py` and the full existing test suite
 before merging.
 
+
+### Troubleshooting optional AI
+
+To see *why* the optional local model did not help with a request, enable
+server-console diagnostics before launching the demo:
+
+```powershell
+$env:RHA_AI_DEBUG = "1"
+uv run python -m bunnyland_archives.demo_server
+```
+
+The server prints small status labels such as `intent: validated_action`,
+`intent: target_not_available`, `intent: connection_or_timeout_failure`,
+`intent: invalid_model_response`, or `narration: invalid_tone_using_neutral`.
+Logs deliberately omit the player request, generated text, evidence, model
+response body, and server URL. They are emitted **only to the server console**,
+not sent to the browser. This opt-in is intended for development; unset
+`RHA_AI_DEBUG` when finished. If there is no diagnostic for an action, it may
+have been handled deterministically without an Ollama call.
+
 ## Verify locally
 
 ```sh

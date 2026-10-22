@@ -6,6 +6,8 @@ only a proposed public action and a narration tone, never trusted game facts.
 from __future__ import annotations
 
 import json
+import os
+import sys
 from dataclasses import dataclass
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -83,6 +85,11 @@ class LocalAI:
     timeout: float = 8.0
     endpoint: str = "http://127.0.0.1:11434/api/chat"
 
+    def _debug(self, category: str, status: str) -> None:
+        """Opt-in local diagnostic; never print prompts, responses, or case data."""
+        if os.environ.get("RHA_AI_DEBUG", "").lower() in {"1", "true", "yes"}:
+            print(f"[RHA AI] {category}: {status}", file=sys.stderr)
+
     def _ask(self, system: str, payload: dict[str, Any]) -> dict[str, Any] | None:
         # Only the trusted server operator configures the backend endpoint.
         # Player commands and browser requests cannot choose a destination.
@@ -100,12 +107,21 @@ class LocalAI:
             self.endpoint, data=body, method="POST",
             headers={"Content-Type": "application/json"},
         )
+        kind = "intent" if "choices" in payload else "narration"
         try:
             with urlopen(request, timeout=self.timeout) as response:
                 result = json.load(response)
             answer = json.loads(result["message"]["content"])
-            return answer if isinstance(answer, dict) else None
-        except (OSError, URLError, HTTPError, ValueError, KeyError, TypeError):
+            if not isinstance(answer, dict):
+                self._debug(kind, "invalid_json_shape")
+                return None
+            self._debug(kind, "model_response_received")
+            return answer
+        except (OSError, URLError, HTTPError):
+            self._debug(kind, "connection_or_timeout_failure")
+            return None
+        except (ValueError, KeyError, TypeError):
+            self._debug(kind, "invalid_model_response")
             return None
 
     def propose(self, text: str, options: dict[str, Any]) -> str | None:
@@ -133,11 +149,15 @@ class LocalAI:
             return None
         selected = (response.get("action"), response.get("target"))
         if not all(isinstance(value, str) for value in selected):
+            self._debug("intent", "no_valid_action")
             return None
         if selected[0] not in _ALLOWED_ACTIONS:
+            self._debug("intent", "unrecognized_action")
             return None
         if not any((choice["action"], choice["target"]) == selected for choice in choices):
+            self._debug("intent", "target_not_available")
             return None
+        self._debug("intent", "validated_action")
         return f"{selected[0]} {selected[1]}"
 
     def narrate(self, packet: dict[str, Any]) -> str:
@@ -162,6 +182,7 @@ class LocalAI:
         )
         tone = response.get("tone") if response else None
         if not isinstance(tone, str) or tone not in _TONES:
+            self._debug("narration", "invalid_tone_using_neutral")
             tone = "neutral"
         if not outcome.get("accepted"):
             return _REJECTED[tone]
