@@ -195,6 +195,38 @@ def trusted_narration(
     return f"{frame} {beat}".strip()
 
 
+
+def public_focus_options(packet: dict[str, Any]) -> dict[str, str]:
+    """Approved optional narration sentences from the current public packet.
+
+    The model may select a key, but never writes the text that is displayed.
+    All references come from present witnesses and already-recorded evidence.
+    """
+    outcome = packet.get("outcome")
+    view = packet.get("view")
+    if not isinstance(outcome, dict) or not isinstance(view, dict):
+        return {}
+    if not outcome.get("accepted") or outcome.get("verdict") == "solved":
+        return {}
+    options: dict[str, str] = {}
+    for witness in view.get("witnesses", []):
+        if isinstance(witness, dict):
+            key, name = witness.get("witness_key"), witness.get("name")
+            if isinstance(key, str) and isinstance(name, str):
+                options[f"witness:{key}"] = f"Your attention returns to {name}."
+    for clue in view.get("discovered", []):
+        if isinstance(clue, dict):
+            key, label = clue.get("evidence_key"), clue.get("label")
+            if isinstance(key, str) and isinstance(label, str):
+                options[f"clue:{key}"] = f"The {label} remains in your casebook."
+    for index, heard in enumerate(view.get("heard", [])):
+        if isinstance(heard, dict) and isinstance(heard.get("statement"), str):
+            options[f"testimony:{index}"] = (
+                f'An earlier statement stays with you: “{heard["statement"]}”'
+            )
+    return options
+
+
 @dataclass(frozen=True)
 class LocalAI:
     """One local inference backend, enabled by RHA_OLLAMA_MODEL."""
@@ -292,9 +324,13 @@ class LocalAI:
             "statements": outcome.get("statements", []),
             "verdict": outcome.get("verdict"),
         }
+        focus_options = public_focus_options(packet)
+        public["focus_options"] = list(focus_options)
         response = self._ask(
-            "Choose a literary tone for the already-authorized action result. "
-            "Reply with one JSON key tone: neutral, curious, or tense. "
+            "Choose a literary tone for the already-authorized action result, "
+            "plus an optional focus ID from focus_options. "
+            "Reply with JSON keys tone (neutral, curious, or tense) and "
+            "optionally focus (exact approved ID). "
             "Do not create facts, descriptions, or dialogue.",
             public,
         )
@@ -302,4 +338,11 @@ class LocalAI:
         if not isinstance(tone, str) or tone not in _TONES:
             self._debug("narration", "invalid_tone_using_neutral")
             tone = "neutral"
-        return trusted_narration(packet, tone, variation=variation)
+        line = trusted_narration(packet, tone, variation=variation)
+        focus = response.get("focus") if response else None
+        if isinstance(focus, str) and focus in focus_options:
+            line += " " + focus_options[focus]
+            self._debug("narration", "validated_focus")
+        elif focus is not None:
+            self._debug("narration", "unavailable_focus_ignored")
+        return line
