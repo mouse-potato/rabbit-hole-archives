@@ -195,3 +195,9 @@ During an interview the model's optional focus is limited to that speaker and
 the statements in the immediate reply. Focus choices include reviewed text so
 the model can select a relevant ID; model-authored prose is still discarded.
 
+The demo declines recognized negated, conditional, and compound action requests
+before inference. Submit one explicit action and target at a time. Conjunctions
+inside a witness topic remain supported. Formal accusations require an explicit,
+uniquely named player request; fallback model proposals cannot select accusation.
+This conservative command handling does not claim general language understanding.
+

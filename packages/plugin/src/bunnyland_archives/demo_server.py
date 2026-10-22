@@ -52,6 +52,7 @@ from .inquiry import (
     evidence_command,
     focused_interview,
     inquiry,
+    request_problem,
 )
 from .local_ai import LocalAI, approach_cue, ollama_chat_endpoint, trusted_narration
 
@@ -179,6 +180,12 @@ class DemoGame:
         # Questions and scene inspection are read-only, handled before the
         # model can mistakenly turn an inquiry into movement or examination.
         public = self.packet()
+        problem = request_problem(text)
+        if problem is not None:
+            return self.packet(NarrationPacket(
+                view=build_packet(self.actor.world, self.character).view,
+                outcome=NarrationOutcome(action="", accepted=False, detail=problem),
+            ))
         topic = followup_topic(text)
         if text.strip().lower() == "end conversation":
             self._active_witness = None
@@ -235,7 +242,11 @@ class DemoGame:
             and known_movement is None
             and resolve_intent(self.actor.world, text).status != "resolved"
         ):
-            proposed = self.ai.propose(text, self._ai_options())
+            inference_options = self._ai_options()
+            # A formal accusation requires a uniquely named explicit request;
+            # the deterministic accusation route above already handles those.
+            inference_options["suspects"] = []
+            proposed = self.ai.propose(text, inference_options)
             if proposed is not None:
                 text = proposed
         normalized = re.sub(r"[^a-z0-9\s-]", " ", text.lower())
