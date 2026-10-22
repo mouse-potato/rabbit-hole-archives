@@ -38,6 +38,12 @@ unknown or sealed details return an uncertainty response rather than invented
 answers. Inquiry does not move the player or discover new evidence, and works
 without Ollama.
 
+Interviews can also acknowledge an explicit player approach, for example
+`I cautiously ask Quill what he heard` or `I softly ask Rosalind`.
+The resulting Narrator cue describes **the investigator's own demeanor** only.
+It never changes testimony, NPC state, evidence or outcome; ambiguous
+descriptions simply use the usual Narrator prose.
+
 An unsuccessful accusation does not reveal whether the suspect was wrong or the evidence insufficient. Interviewing witnesses is optional but provides useful leads.
 
 ### Authoring public narrative details
