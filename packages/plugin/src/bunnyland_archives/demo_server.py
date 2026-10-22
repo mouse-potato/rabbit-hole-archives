@@ -46,7 +46,7 @@ from . import (
     resolve_intent,
 )
 from .inquiry import SCENES, conversational_command, evidence_command, inquiry
-from .local_ai import LocalAI, ollama_chat_endpoint, trusted_narration
+from .local_ai import LocalAI, approach_cue, ollama_chat_endpoint, trusted_narration
 
 WEB_ROOT = Path(__file__).resolve().parents[4] / "web"
 CASE_PATH = Path(__file__).with_name("demo_case.json")
@@ -111,6 +111,7 @@ class DemoGame:
 
     def packet(
         self, packet: NarrationPacket | None = None, *, narrate: bool = False,
+        player_text: str = "",
     ) -> dict[str, Any]:
         safe = (packet or build_packet(self.actor.world, self.character)).model_dump(mode="json")
         safe["options"] = self._options()
@@ -132,6 +133,12 @@ class DemoGame:
                 if self.ai is not None
                 else trusted_narration(safe, variation=variation)
             )
+            outcome = safe.get("outcome") or {}
+            action = str(outcome.get("action", ""))
+            if outcome.get("accepted") and ("talk" in action or "witness" in action):
+                cue = approach_cue(player_text)
+                if cue:
+                    safe["narration"] = cue + " " + safe["narration"]
         return safe
 
     def _ai_options(self) -> dict[str, Any]:
@@ -144,6 +151,7 @@ class DemoGame:
         return options
 
     def act(self, text: str) -> dict[str, Any]:
+        original_text = text
         if len(text) > 300:
             return self.packet(NarrationPacket(
                 view=build_packet(self.actor.world, self.character).view,
@@ -183,7 +191,7 @@ class DemoGame:
                     action="accuse", accepted=False,
                     detail="That person is not among the listed suspects.",
                 ),
-            ), narrate=True)
+            ), narrate=True, player_text=original_text)
         # A model may suggest a public option but cannot execute arbitrary commands.
         # Known deterministic inputs continue to run without inference.
         # Preserve the existing reliable parser, especially button commands.
