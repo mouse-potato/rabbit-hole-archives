@@ -99,6 +99,21 @@ function renderPacket(packet) {
   element("h3", view.place_name || "Unknown location", scene);
   const description = packet.scene_description || "You survey the room.";
   element("p", description, scene);
+  const visibleWitnesses = view.witnesses || [];
+  if (visibleWitnesses.length) {
+    const present = document.createElement("section");
+    present.className = "scene-presence";
+    element("h4", "People here", present);
+    for (const witness of visibleWitnesses) {
+      const entry = document.createElement("div");
+      entry.className = "scene-person";
+      element("p", witness.name, entry).className = "scene-person-name";
+      const appearance = packet.witness_descriptions?.[witness.witness_key];
+      if (appearance) element("p", appearance, entry);
+      present.append(entry);
+    }
+    scene.append(present);
+  }
   const options = packet.options || {};
   if (view.solved) {
     element("p", "Case closed. You have assembled enough evidence to support your accusation.", scene).className = "success";
