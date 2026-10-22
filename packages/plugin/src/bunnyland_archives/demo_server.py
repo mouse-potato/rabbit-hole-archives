@@ -69,6 +69,10 @@ class DemoGame:
         self.ai = ai if ai is not None else (
             LocalAI(model=model, endpoint=endpoint) if model else None
         )
+        self._start_investigation()
+
+    def _start_investigation(self) -> None:
+        """Start a fresh world from the authored demo, never generated content."""
         actor = WorldActor()
         apply_plugins([archive_plugin()], actor)
         case = CaseDefinition.model_validate_json(CASE_PATH.read_text(encoding="utf-8"))
@@ -166,6 +170,15 @@ class DemoGame:
             return self.packet(NarrationPacket(
                 view=build_packet(self.actor.world, self.character).view,
                 outcome=NarrationOutcome(action="", accepted=False, detail="Command is too long."),
+            ))
+        if text.strip().casefold() in {"restart investigation", "new investigation"}:
+            self._start_investigation()
+            return self.packet(NarrationPacket(
+                view=build_packet(self.actor.world, self.character).view,
+                outcome=NarrationOutcome(
+                    action="restart", accepted=True,
+                    detail="You begin a fresh investigation of the authored case.",
+                ),
             ))
         # Once solved, the investigation is immutable from the player's perspective.
         # Enforce this on the server, not only through disabled browser controls.
