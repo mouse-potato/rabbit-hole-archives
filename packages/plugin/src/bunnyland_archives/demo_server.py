@@ -160,7 +160,7 @@ class DemoGame:
             recognized = conversational_command(text, self._ai_options())
         if recognized is not None:
             text = recognized
-        elif re.search(r"\\b(?:accuse|accusing|charge|blame)\\b", text.lower()):
+        elif re.search(r"\b(?:accuse|accusing|charge|blame)\b", text.lower()):
             # Do not let inference silently substitute a different suspect.
             return self.packet(NarrationPacket(
                 view=build_packet(self.actor.world, self.character).view,
