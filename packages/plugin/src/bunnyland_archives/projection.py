@@ -52,6 +52,7 @@ class WitnessPresentView(BaseModel):
 
     witness_key: str
     name: str
+    appearance: str | None = None
 
 
 class HeardTestimonyView(BaseModel):
@@ -76,6 +77,7 @@ class ArchiveNarratorView(BaseModel):
     case_title: str
     place_key: str | None
     place_name: str | None
+    place_description: str | None = None
     discovered: tuple[DiscoveredEvidenceView, ...]
     witnesses: tuple[WitnessPresentView, ...] = ()
     heard: tuple[HeardTestimonyView, ...] = ()
@@ -104,6 +106,7 @@ def narrator_view(world: World, character_id: EntityId | str) -> ArchiveNarrator
 
     place_key: str | None = None
     place_name: str | None = None
+    place_description: str | None = None
     room_id = container_of(character)
     if room_id is not None and world.has_entity(room_id):
         room = world.get_entity(room_id)
@@ -111,6 +114,7 @@ def narrator_view(world: World, character_id: EntityId | str) -> ArchiveNarrator
             place = room.get_component(ArchivePlaceComponent)
             place_key = place.place_key
             place_name = place.name
+            place_description = place.description
 
     discovered: list[DiscoveredEvidenceView] = []
     for record_entity in world.query().with_all([DiscoveryComponent]).execute_entities():
@@ -141,7 +145,9 @@ def narrator_view(world: World, character_id: EntityId | str) -> ArchiveNarrator
     witnesses = tuple(
         sorted(
             (
-                WitnessPresentView(witness_key=item.witness_key, name=item.name)
+                WitnessPresentView(
+                    witness_key=item.witness_key, name=item.name, appearance=item.appearance,
+                )
                 for item in (
                     entity.get_component(ArchiveWitnessComponent)
                     for entity in world.query()
@@ -195,6 +201,7 @@ def narrator_view(world: World, character_id: EntityId | str) -> ArchiveNarrator
         case_title=case.title,
         place_key=place_key,
         place_name=place_name,
+        place_description=place_description,
         discovered=tuple(discovered),
         witnesses=witnesses,
         heard=heard,
