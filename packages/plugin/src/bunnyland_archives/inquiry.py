@@ -161,6 +161,44 @@ def testimony_inquiry(text: str, view: dict[str, Any]) -> str | None:
         f'“{item["statement"]}”' for item in selected
     )
 
+
+_INTERVIEW_FILLER = _TOPIC_STOPWORDS | {
+    "ask", "asking", "question", "interview", "talk", "speak",
+    "with", "please", "can", "may", "i", "want", "would", "like",
+    "tell", "heard", "saw", "see", "quill", "porter", "maid", "rosalind",
+}
+
+
+def focused_interview(
+    player_text: str, witness_key: str, view: dict[str, Any],
+) -> tuple[str, ...] | None:
+    """Select only previously recorded statements for an explicit topic.
+
+    None means ordinary full interview. An empty tuple means the witness's
+    authored testimony does not address that topic. This operates entirely
+    on the investigator's restricted, post-interview projection.
+    """
+    normalized = _clean(player_text)
+    if not re.search(r"\b(?:about|regarding|concerning)\b", normalized):
+        return None
+    topic_text = re.split(
+        r"\b(?:about|regarding|concerning)\b", normalized, maxsplit=1,
+    )[1]
+    topics = set(topic_text.split()) - _INTERVIEW_FILLER
+    if not topics:
+        return None
+    statements = [
+        item for item in view.get("heard", [])
+        if item.get("witness_key") == witness_key
+    ]
+    return tuple(
+        str(item["statement"]) for item in statements
+        if topics.intersection(_clean(str(item["statement"])).split())
+        or topics.intersection(
+            _clean(str(item.get("lead_evidence_key") or "")).split()
+        )
+    )
+
 def inquiry(text: str, packet: dict[str, Any]) -> str | None:
     """Return an answer for supported questions; None for gameplay commands.
 
