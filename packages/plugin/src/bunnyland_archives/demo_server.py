@@ -87,6 +87,7 @@ class DemoGame:
         self.actor = actor
         self.character = character.id
         self.controller = controller.id
+        self._narration_turn = 0
 
     def _options(self) -> dict[str, Any]:
         world = self.actor.world
@@ -116,8 +117,12 @@ class DemoGame:
         safe["scene_description"] = SCENES.get(str(safe["view"]["place_key"]), "")
         safe["ai_enabled"] = self.ai is not None
         if narrate:
+            variation = self._narration_turn % 3
+            self._narration_turn += 1
             safe["narration"] = (
-                self.ai.narrate(safe) if self.ai is not None else trusted_narration(safe)
+                self.ai.narrate(safe, variation=variation)
+                if self.ai is not None
+                else trusted_narration(safe, variation=variation)
             )
         return safe
 
