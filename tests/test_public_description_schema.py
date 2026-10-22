@@ -5,6 +5,7 @@ import json
 from copy import deepcopy
 
 import pytest
+from archive_harness import case_data
 from bunnyland.core import (
     ActionPointsComponent,
     CharacterComponent,
@@ -25,8 +26,6 @@ from bunnyland_archives import (
 )
 from pydantic import ValidationError
 from rabbit_hole_engine.authoring import CaseDefinition
-
-from archive_harness import case_data
 
 
 def make_case() -> CaseDefinition:
