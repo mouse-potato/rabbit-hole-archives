@@ -18,7 +18,7 @@
 <div class="layout">
 <section aria-labelledby="scene-heading"><h2 id="scene-heading">Investigation</h2><div id="scene"><p>Opening case…</p></div>
 <form id="command-form"><label for="command">What do you do?</label><div class="command"><input id="command" autocomplete="off" maxlength="300" placeholder="Talk to porter, examine receipt…"><button id="act-button" type="submit">Act</button></div></form>
-<div class="transcript-heading"><h3>Investigation transcript</h3><button type="button" id="export-transcript">Export transcript (.txt)</button></div><ol id="transcript" aria-label="Investigation transcript" aria-live="polite" aria-relevant="additions"></ol>
+<div class="transcript-heading"><h3 id="transcript-heading">Investigation transcript</h3><div class="transcript-controls"><button type="button" id="latest-transcript">Jump to latest</button><button type="button" id="export-transcript">Export transcript (.txt)</button></div></div><p class="hint" id="transcript-help">Entries remain in chronological order. Scroll within the transcript to read earlier messages.</p><div id="transcript-scroll" role="region" aria-labelledby="transcript-heading" aria-describedby="transcript-help" tabindex="0"><ol id="transcript" aria-label="Investigation transcript"></ol></div><p id="transcript-update" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
 </section>
 <aside aria-labelledby="casebook-heading"><h2 id="casebook-heading">Casebook</h2><div id="casebook"><p>Evidence and witness statements appear here as you discover them.</p></div></aside>
 </div>

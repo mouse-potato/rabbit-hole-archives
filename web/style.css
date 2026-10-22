@@ -38,6 +38,11 @@ button:disabled { opacity: .6; cursor: wait; }
 .success { border-left: 3px solid #d9bd8b; padding-left: .8rem; }
 .casebook-entry { border: 0; border-left: 2px solid #806b91; border-radius: 0; background: #292135; padding: .25rem .8rem; margin: .5rem 0 1rem; }
 .casebook-entry h4 { text-transform: capitalize; }
+.transcript-heading { display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap; }
+.transcript-controls { display: flex; gap: .5rem; flex-wrap: wrap; }
+#transcript-scroll { max-height: min(45vh, 30rem); overflow-y: auto; overscroll-behavior: contain; border: 1px solid #62516f; border-radius: 6px; padding: .5rem 1rem; }
+#transcript-scroll:focus-visible { outline: 3px solid #f4c875; outline-offset: 3px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 #transcript { padding-left: 1.5rem; }
 #transcript li { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #62516f; white-space: pre-wrap; }
 .skip { position: absolute; top: -100px; background: white; color: black; padding: 1rem; }
