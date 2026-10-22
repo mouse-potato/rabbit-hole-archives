@@ -102,7 +102,7 @@ _TOPIC_STOPWORDS = frozenset({
     "what", "did", "does", "do", "know", "think", "say", "said", "heard",
     "about", "anything", "something", "the", "a", "an", "of", "to",
     "from", "me", "you", "he", "she", "they", "his", "her", "their",
-    "quill", "porter", "rosalind", "maid", "witness", "tell", "could",
+    "witness", "tell", "could",
     "would", "is", "was", "there", "on", "with",
 })
 
@@ -145,6 +145,8 @@ def testimony_inquiry(text: str, view: dict[str, Any]) -> str | None:
         return "You have not recorded any testimony from that witness yet."
 
     topics = set(normalized.split()) - _TOPIC_STOPWORDS
+    for alias in names[witness_key]:
+        topics.difference_update(alias.split())
     if not topics:
         selected = statements
     else:
