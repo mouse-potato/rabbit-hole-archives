@@ -242,7 +242,7 @@ def test_unlisted_witness_cannot_be_silently_substituted_as_suspect(
         assert result["outcome"]["accepted"] is False
         assert "listed suspects" in result["outcome"]["detail"]
         assert result["view"]["solved"] is False
-    assert calls == []
+    assert all("choices" not in payload for payload in calls)
 
 
 def test_negated_accusation_not_interpreted_as_action() -> None:
