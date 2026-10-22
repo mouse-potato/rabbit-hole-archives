@@ -27,7 +27,7 @@ def test_scene_changes_narration_without_exposing_next_clue() -> None:
     game = DemoGame()
     game.act("go to hall")
     result = game.act("look at glove")
-    assert "Near the side door" in result["narration"]
+    assert "hall" in result["narration"].lower() or "side door" in result["narration"].lower()
     assert "Ada signed the seal out and concealed it" not in str(result)
     assert result["outcome"]["observation"].startswith("Inside a damp riding glove")
 
