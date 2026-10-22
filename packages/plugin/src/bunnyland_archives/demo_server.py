@@ -253,7 +253,7 @@ class DemoGame:
                     )
             return self.packet(NarrationPacket(
                 view=build_packet(self.actor.world, self.character).view, outcome=outcome
-            ), narrate=True)
+            ), narrate=True, player_text=original_text)
 
         resolved = resolve_intent(self.actor.world, text)
         if resolved.status != "resolved":
@@ -261,7 +261,7 @@ class DemoGame:
                 view=build_packet(self.actor.world, self.character).view,
                 outcome=NarrationOutcome(action=resolved.command_type or "",
                                          accepted=False, detail=resolved.reason),
-            ), narrate=True)
+            ), narrate=True, player_text=original_text)
         ctx = HandlerContext(world=self.actor.world, epoch=self.actor.epoch)
         result = perform(
             ctx, character_id=str(self.character), controller_id=str(self.controller),
@@ -269,7 +269,7 @@ class DemoGame:
             apply=apply_handler_result,
         )
         return self.packet(build_packet(self.actor.world, self.character, result,
-                                        action=resolved.command_type or ""), narrate=True)
+                                        action=resolved.command_type or ""), narrate=True, player_text=original_text)
 
 
 def serve(host: str = "127.0.0.1", port: int = 8000) -> None:
