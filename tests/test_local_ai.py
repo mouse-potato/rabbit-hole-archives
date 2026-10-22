@@ -84,7 +84,8 @@ def test_demo_uses_model_proposal_but_engine_remains_authoritative(
     response = game.act("Please ask that fellow Quill what he saw")
     assert response["outcome"]["accepted"] is True
     assert len(response["view"]["heard"]) == 2
-    assert response["narration"] == "Another perspective may illuminate the case."
+    assert response["narration"] == ("Another perspective may illuminate the case. "
+                                       "In the quiet study, a witness\'s words seem to carry further.")
     assert "solution" not in str(seen)
     assert "culprit" not in str(seen)
 
