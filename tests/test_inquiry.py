@@ -221,3 +221,34 @@ def test_where_am_i_with_typo_still_reports_location() -> None:
     result = game.act("where am I right nw")
     assert result["outcome"]["action"] == "inquire"
     assert "study" in result["outcome"]["detail"].lower()
+
+
+def test_unlisted_witness_cannot_be_silently_substituted_as_suspect(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    ai = LocalAI(model="mock")
+    calls: list[dict[str, Any]] = []
+
+    def bad_guess(
+        _self: LocalAI, _system: str, payload: dict[str, Any],
+    ) -> dict[str, str]:
+        calls.append(payload)
+        return {"action": "accuse", "target": "ada"}
+
+    monkeypatch.setattr(LocalAI, "_ask", bad_guess)
+    game = DemoGame(ai=ai)
+    for player_text in ("I want to accuse the Porter.", "I accuse the Porter."):
+        result = game.act(player_text)
+        assert result["outcome"]["accepted"] is False
+        assert "listed suspects" in result["outcome"]["detail"]
+        assert result["view"]["solved"] is False
+    assert calls == []
+
+
+def test_negated_accusation_not_interpreted_as_action() -> None:
+    from bunnyland_archives.inquiry import conversational_command
+
+    game = DemoGame()
+    assert conversational_command(
+        "I don't want to accuse Ada", game._ai_options(),
+    ) is None
