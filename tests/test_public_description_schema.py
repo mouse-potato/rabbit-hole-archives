@@ -33,10 +33,9 @@ def make_case() -> CaseDefinition:
     data = deepcopy(case_data())
     data["schema_version"] = 2
     data["locations"][0]["description"] = "A clock marks the study's silence."
-    data["witnesses"] = [{
-        "id": "porter", "name": "Porter Quill", "location": "study",
-        "appearance": "The porter wears a dark waistcoat.",
-    }]
+    for witness in data["witnesses"]:
+        if witness["id"] == "porter":
+            witness["appearance"] = "The porter wears a dark waistcoat."
     return CaseDefinition.model_validate_json(json.dumps(data))
 
 
@@ -94,4 +93,4 @@ def test_empty_authored_description_rejected(bad_description: str) -> None:
 def test_optional_description_does_not_break_legacy_cases() -> None:
     legacy = CaseDefinition.model_validate_json(json.dumps(case_data()))
     assert legacy.locations[0].description is None
-    assert legacy.witnesses == ()
+    assert all(witness.appearance is None for witness in legacy.witnesses)
