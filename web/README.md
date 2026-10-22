@@ -94,7 +94,7 @@ The in-page transcript keeps chronological order for reading and exported files.
 It sits in a separate, keyboard-focusable scroll area; use **Jump to latest** to
 return to the newest messages. New entries follow automatically only while
 you're already reading the end of the transcript. Reviewing older entries
-doesn't move your scroll position.
+doesn't move your scroll position. The **Jump to latest** button shows a count\nof unseen entries until you scroll back to the end or activate it.
 
 For a manual keyboard and screen-reader check: tab to the transcript region,
 scroll it with the keyboard, submit another command while reviewing older
