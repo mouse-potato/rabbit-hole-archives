@@ -77,6 +77,58 @@ _CLOSED = {
 }
 
 
+
+# Authored atmospheric beats, independent of the inference service. They do
+# not add clues, physical details, NPC knowledge, or speculation as fact.
+_SCENE_BEATS = {
+    "study": {
+        "move": "The desk waits in uneasy silence beneath the absence of the seal.",
+        "examine": "Among the study's paperwork, small details demand a second look.",
+        "talk": "In the quiet study, a witness's words seem to carry further.",
+        "accuse": "The accusation hangs in the hush of the study.",
+    },
+    "hall": {
+        "move": "The passage leads toward the side door; there is still more to examine.",
+        "examine": "Near the side door, the smallest detail might change the case.",
+        "talk": "In the hall, every recollection points back to someone's movements.",
+        "accuse": "Your accusation interrupts the stillness of the hall.",
+    },
+}
+
+
+def trusted_narration(packet: dict[str, Any], tone: str = "neutral") -> str:
+    """Compose atmosphere from reviewed strings and a public action outcome.
+
+    No model output is rendered directly. The same prose works when offline.
+    """
+    outcome = packet.get("outcome")
+    if not isinstance(outcome, dict):
+        return ""
+    if tone not in _TONES:
+        tone = "neutral"
+    if not outcome.get("accepted"):
+        return _REJECTED[tone]
+    if outcome.get("verdict") == "solved":
+        return _CLOSED[tone]
+    action = str(outcome.get("action", ""))
+    kind = ""
+    if action == "move":
+        kind = "move"
+    elif "examine" in action:
+        kind = "examine"
+    elif "talk" in action or "witness" in action:
+        kind = "talk"
+    elif "accuse" in action:
+        kind = "accuse"
+    if not kind:
+        return "You consider what you have learned."
+    frame = _FRAMES[kind][tone]
+    view = packet.get("view", {})
+    place_key = str(view.get("place_key", "")) if isinstance(view, dict) else ""
+    beat = _SCENE_BEATS.get(place_key, {}).get(kind, "")
+    return f"{frame} {beat}".strip()
+
+
 @dataclass(frozen=True)
 class LocalAI:
     """One local inference backend, enabled by RHA_OLLAMA_MODEL."""
@@ -184,17 +236,4 @@ class LocalAI:
         if not isinstance(tone, str) or tone not in _TONES:
             self._debug("narration", "invalid_tone_using_neutral")
             tone = "neutral"
-        if not outcome.get("accepted"):
-            return _REJECTED[tone]
-        if outcome.get("verdict") == "solved":
-            return _CLOSED[tone]
-        action = str(outcome.get("action", ""))
-        if action == "move":
-            return _FRAMES["move"][tone]
-        if "examine" in action:
-            return _FRAMES["examine"][tone]
-        if "talk" in action or "witness" in action:
-            return _FRAMES["talk"][tone]
-        if "accuse" in action:
-            return _FRAMES["accuse"][tone]
-        return "You consider what you have learned."
+        return trusted_narration(packet, tone)

@@ -77,8 +77,10 @@ unavailable, or malformed model responses fall back to the deterministic
 parser and can be rejected. Ordinary known commands keep their deterministic
 behavior. This is **not** freeform, topic-specific NPC dialogue yet.
 
-The local model can also select a tone for one short Narrator line; that line
-comes from fixed, trusted templates. All actual observations, testimony, and
+The Narrator now combines tone with an **authored, scene-specific atmospheric
+beat** for travel, inspection, witness interviews and accusations. These beats
+also work without Ollama. When AI is configured, the model may select the
+tone; it cannot write the final line. All actual observations, testimony, and
 verdicts continue to come from the game engine. We deliberately do not allow
 the model to invent facts or produce unrestricted narrative prose in this
 first slice. Model calls are synchronous and may delay actions when the local
