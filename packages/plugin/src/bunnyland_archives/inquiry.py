@@ -68,6 +68,8 @@ def conversational_command(text: str, options: dict[str, Any]) -> str | None:
     requested action category and uniquely matched available target may pass.
     """
     normalized = _clean(text)
+    if re.search(r"\b(?:don't|do not|never|not going to)\b", normalized):
+        return None
     action: tuple[str, str] | None = None
     if re.search(r"\b(?:accuse|accusing|charge|blame)\b", normalized):
         action = ("accuse", "suspects")
@@ -93,6 +95,7 @@ def conversational_command(text: str, options: dict[str, Any]) -> str | None:
     if len(matched) == 1:
         return verb + " " + matched[0]
     return None
+
 
 def inquiry(text: str, packet: dict[str, Any]) -> str | None:
     """Return an answer for supported questions; None for gameplay commands.
