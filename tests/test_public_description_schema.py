@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import json
 
 import pytest
 from bunnyland.core import (
@@ -36,7 +37,7 @@ def make_case() -> CaseDefinition:
         "id": "porter", "name": "Porter Quill", "location": "study",
         "appearance": "The porter wears a dark waistcoat.",
     }]
-    return CaseDefinition.model_validate(data)
+    return CaseDefinition.model_validate_json(json.dumps(data))
 
 
 def test_public_description_round_trip_and_import() -> None:
@@ -87,10 +88,10 @@ def test_empty_authored_description_rejected(bad_description: str) -> None:
     data = deepcopy(case_data())
     data["locations"][0]["description"] = bad_description
     with pytest.raises(ValidationError):
-        CaseDefinition.model_validate(data)
+        CaseDefinition.model_validate_json(json.dumps(data))
 
 
 def test_optional_description_does_not_break_legacy_cases() -> None:
-    legacy = CaseDefinition.model_validate(case_data())
+    legacy = CaseDefinition.model_validate_json(json.dumps(case_data()))
     assert legacy.locations[0].description is None
     assert legacy.witnesses == ()
