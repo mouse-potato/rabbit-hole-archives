@@ -18,8 +18,15 @@ def test_first_and_repeated_interviews_have_public_speaker_and_history() -> None
         assert "Porter Quill" in result["narration"]
     assert first["outcome"]["first_conversation"] is True
     assert again["outcome"]["first_conversation"] is False
-    assert "recorded account" in again["narration"]
-    assert first["view"] == again["view"]
+    assert "learn another part" in again["narration"]
+    assert first["outcome"]["new_testimony"] is True
+    assert again["outcome"]["new_testimony"] is True
+    assert len(first["view"]["heard"]) == 1
+    assert len(again["view"]["heard"]) == 2
+    repeated = game.act("what about receipt?")
+    assert repeated["outcome"]["new_testimony"] is False
+    assert "recorded account" in repeated["narration"]
+    assert repeated["view"] == again["view"]
 
 
 def test_unknown_topic_narration_does_not_claim_an_answer() -> None:

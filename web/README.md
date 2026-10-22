@@ -33,12 +33,20 @@ the same public description packet; no remote-witness biography is included.
 
 
 Scene inquiries describe only the current location and visible targets; casebook
-inquiries repeat only recorded observations and statements. After you interview a\nwitness, try `what did Quill say about the receipt?` or `what did Rosalind\nsay about the glove?` to revisit matching testimony. This reads the existing\ncasebook and never generates new claims from an NPC. Questions about
+inquiries repeat only recorded observations and statements. After you interview a
+witness, try `what did Quill say about the receipt?` or `what did Rosalind
+say about the glove?` to revisit matching testimony. This reads the existing
+casebook and never generates new claims from an NPC. Questions about
 unknown or sealed details return an uncertainty response rather than invented
 answers. Inquiry does not move the player or discover new evidence, and works
 without Ollama.
 
-To ask a focused question, try `ask Quill about the receipt` or `question\nQuill regarding the receipt`. The Narrator displays only matching authored\ntestimony for that topic, while the casebook still records the witness's\ncanonical account. If the account does not address the topic, the Narrator\nsays so rather than inventing an answer.\n\nInterviews can also acknowledge an explicit player approach, for example
+To ask a focused question, try `ask Quill about the receipt` or `question
+Quill regarding the receipt`. Only matching authored testimony and its leads become known: the reply,
+casebook, lead review, and Narrator all share that restricted knowledge. If the account does not address the topic, the Narrator
+says so rather than inventing an answer.
+
+Interviews can also acknowledge an explicit player approach, for example
 `I cautiously ask Quill what he heard` or `I softly ask Rosalind`.
 The resulting Narrator cue describes **the investigator's own demeanor** only.
 It never changes testimony, NPC state, evidence or outcome; ambiguous
@@ -128,7 +136,8 @@ The in-page transcript keeps chronological order for reading and exported files.
 It sits in a separate, keyboard-focusable scroll area; use **Jump to latest** to
 return to the newest messages. New entries follow automatically only while
 you're already reading the end of the transcript. Reviewing older entries
-doesn't move your scroll position. The **Jump to latest** button shows a count\nof unseen entries until you scroll back to the end or activate it.
+doesn't move your scroll position. The **Jump to latest** button shows a count
+of unseen entries until you scroll back to the end or activate it.
 
 For a manual keyboard and screen-reader check: tab to the transcript region,
 scroll it with the keyboard, submit another command while reviewing older
@@ -184,9 +193,9 @@ the model. An unsuccessful interview clears the previous addressee as well.
 
 The public packet's optional `conversation` object contains `witness_key`,
 `name`, and `lead_topics` from already recorded testimony only. It introduces no
-NPC feelings or new testimony. As with the existing interview behavior, the
-casebook records the complete authored interview while a topic filters the
-immediate reply. This host context is temporary and has no save/resume promise.
+NPC feelings or new testimony. A general interview gives the first authored statement; repeating it
+does not reveal the rest. Focused questions accumulate only matching statements
+in the casebook, in authored order. This host context is temporary and has no save/resume promise.
 
 Narration distinguishes the first examination/interview from a review using
 public outcome flags, and identifies an interviewed witness by their visible
@@ -214,14 +223,16 @@ It works after a solved case too, resets conversation context and narration
 rotation, and keeps the configured inference backend. This is replay, not case
 generation. There is still one shared localhost session and no save/resume.
 
-### Next NPC decision
+### Statement-level testimony
 
-Current topic filtering changes the immediate reply; the first accepted interview
-records the witness's whole authored account. Unlocking individual statements
-only when their topics are asked would change the knowledge model. Decide before
-implementing that: keep full interviews with focused follow-ups, or introduce
-statement-level discovery with explicit authored topics and new persistence rules.
-The latter needs a policy for broad interviews, unknown topics, topic aliases,
-existing saves, and how players learn which topics they can ask. Neither option
-changes the immutable underlying events, evidence, statements, or solution.
+A focused question unlocks only matching authored statements and their leads.
+General interviews give the first authored statement as an opening; repeated
+openings do not reveal additional statements. Unknown or empty topics unlock
+nothing. Topic matching uses words in authored statements and lead keys; it does
+not use model inference or expose an unasked-topic menu. Repeated topics are
+idempotent, and the Narrator distinguishes newly learned testimony from review.
 
+ECS saves made before statement-level knowledge retain testimony already learned
+through full interviews. New conversation records track specific statement keys.
+The browser host still has no save/resume UI. See
+[ADR-006](../docs/decisions/0006-statement-level-testimony.md).

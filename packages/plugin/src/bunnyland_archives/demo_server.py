@@ -50,11 +50,11 @@ from .inquiry import (
     SCENES,
     conversational_command,
     evidence_command,
-    focused_interview,
     inquiry,
     request_problem,
 )
 from .local_ai import LocalAI, approach_cue, ollama_chat_endpoint, trusted_narration
+from .testimony import interview_topic
 
 WEB_ROOT = Path(__file__).resolve().parents[4] / "web"
 CASE_PATH = Path(__file__).with_name("demo_case.json")
@@ -324,6 +324,7 @@ class DemoGame:
             ctx, character_id=str(self.character), controller_id=str(self.controller),
             controller_generation=self.generation, resolution=resolved,
             apply=apply_handler_result,
+            topic=interview_topic(original_text),
         )
         narration_packet = build_packet(
             self.actor.world, self.character, result,
@@ -335,22 +336,6 @@ class DemoGame:
                 resolved.target_key
                 if interview_outcome is not None and interview_outcome.accepted else None
             )
-        if interview_outcome is not None and interview_outcome.accepted and "talk" in interview_outcome.action:
-            witness_key = resolved.target_key
-            if witness_key is not None:
-                heard = narration_packet.view.model_dump(mode="json")
-                selected = focused_interview(original_text, witness_key, heard)
-                if selected is not None:
-                    if selected:
-                        revised = interview_outcome.model_copy(update={"statements": selected})
-                    else:
-                        revised = interview_outcome.model_copy(update={
-                            "statements": (),
-                            "detail": "The witness's recorded account does not address that topic.",
-                        })
-                    narration_packet = narration_packet.model_copy(
-                        update={"outcome": revised},
-                    )
         return self.packet(
             narration_packet, narrate=True, player_text=original_text,
         )

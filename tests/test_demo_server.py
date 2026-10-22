@@ -16,7 +16,7 @@ def test_demo_requires_both_rooms_and_clues_to_solve() -> None:
 
     questioned = game.act("talk to porter")
     assert questioned["outcome"]["accepted"] is True
-    assert len(questioned["view"]["heard"]) == 2
+    assert len(questioned["view"]["heard"]) == 1
 
     first = game.act("examine receipt")
     assert "Ada Vance" in first["outcome"]["observation"]
@@ -134,3 +134,4 @@ def test_solved_case_rejects_subsequent_actions() -> None:
         assert "closed" in rejected["outcome"]["detail"]
         assert rejected["view"]["solved"] is True
         assert rejected["view"]["place_key"] == "hall"
+

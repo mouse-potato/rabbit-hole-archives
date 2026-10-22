@@ -43,6 +43,7 @@ from .mechanics import (
     WitnessQuestionedEvent,
 )
 from .projection import ArchiveNarratorView, narrator_view
+from .testimony import interview_topic
 
 _HANDLERS: dict[
     str, type[ExamineEvidenceHandler | TalkToWitnessHandler | AccuseSuspectHandler]
@@ -72,6 +73,7 @@ class IntentResolution(BaseModel):
     target_id: str | None = None
     target_key: str | None = None
     reason: str = ""
+    topic: str | None = None
 
 
 class NarrationOutcome(BaseModel):
@@ -89,6 +91,7 @@ class NarrationOutcome(BaseModel):
     witness_name: str | None = None
     first_discovery: bool | None = None
     first_conversation: bool | None = None
+    new_testimony: bool | None = None
 
 
 class NarrationPacket(BaseModel):
@@ -189,6 +192,7 @@ def resolve_intent(world: World, text: str) -> IntentResolution:
         command_type=command_type,
         target_id=str(target),
         target_key=_target_key(world, target),
+        topic=interview_topic(text) if command_type == TALK_COMMAND_TYPE else None,
     )
 
 
@@ -211,6 +215,7 @@ def perform(
     controller_generation: int,
     resolution: IntentResolution,
     apply: Callable[[HandlerContext, HandlerResult], object] | None = None,
+    topic: str | None = None,
 ) -> HandlerResult | None:
     """Run a resolved proposal through the real handler. Returns None if unresolved.
 
@@ -227,6 +232,7 @@ def perform(
         controller_generation=controller_generation,
         command_type=resolution.command_type,
         target_id=resolution.target_id or "",
+        topic=topic if topic is not None else resolution.topic,
     )
     result = handler.execute(ctx, command)
     if result.ok and apply is not None:
@@ -241,6 +247,7 @@ def _build_command(
     controller_generation: int,
     command_type: str,
     target_id: str,
+    topic: str | None = None,
 ) -> SubmittedCommand:
     from bunnyland.core import CommandCost, Lane, build_submitted_command
 
@@ -251,7 +258,9 @@ def _build_command(
         command_type=command_type,
         cost=CommandCost(action=1),
         lane=Lane.WORLD,
-        payload={"target_id": target_id},
+        payload={"target_id": target_id, **(
+            {"topic": topic} if topic is not None and command_type == TALK_COMMAND_TYPE else {}
+        )},
     )
 
 
@@ -298,6 +307,9 @@ def _public_outcome(
                 witness_name=next((w.name for w in view.witnesses
                                    if w.witness_key == event.witness_key), None),
                 first_conversation=event.first_conversation,
+                new_testimony=event.new_testimony,
+                detail=("The witness's recorded account does not address that topic."
+                        if not event.statements else ""),
             )
         if isinstance(event, AccusationResolvedEvent):
             return NarrationOutcome(

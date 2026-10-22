@@ -187,6 +187,8 @@ def trusted_narration(
         if not outcome.get("statements"):
             return f"You put the question to {speaker}. The recorded account offers no answer on that topic."
         if outcome.get("first_conversation") is False:
+            if outcome.get("new_testimony") is True:
+                return f"You learn another part of {speaker}'s account."
             return f"You return to {speaker}'s recorded account."
     kind = ""
     if action == "move":
@@ -354,6 +356,7 @@ class LocalAI:
             "witness_name": outcome.get("witness_name"),
             "first_discovery": outcome.get("first_discovery"),
             "first_conversation": outcome.get("first_conversation"),
+            "new_testimony": outcome.get("new_testimony"),
         }
         focus_options = public_focus_options(packet)
         public["focus_options"] = focus_options

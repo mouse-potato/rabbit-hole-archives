@@ -20,7 +20,7 @@ def test_approach_is_reflected_in_interview_narration(
     result = game.act(phrase)
     assert result["outcome"]["accepted"] is True
     assert result["narration"].startswith(cue)
-    assert len(result["view"]["heard"]) == 2
+    assert len(result["view"]["heard"]) == 1
 
 
 def test_approach_is_cosmetic_and_cannot_create_testimony() -> None:
@@ -62,3 +62,4 @@ def test_model_does_not_receive_raw_player_demeanor(
     result = game.act("I softly ask Quill what he heard")
     assert "You keep your voice gentle." in result["narration"]
     assert all("softly" not in str(item) for item in seen)
+

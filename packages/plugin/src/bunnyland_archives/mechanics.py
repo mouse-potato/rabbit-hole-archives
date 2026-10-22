@@ -16,6 +16,7 @@ from bunnyland.core import (
     HandlerContext,
     HandlerResult,
     MutationPlan,
+    SetComponent,
     SubmittedCommand,
     execute_mutation_plan,
     parse_entity_id,
@@ -44,6 +45,7 @@ from .components import (
     InvestigatorSessionComponent,
     SealedSolutionComponent,
 )
+from .testimony import topic_matches
 
 COMMAND_TYPE = "examine-evidence"
 TALK_COMMAND_TYPE = TALK_TO_WITNESS.command_type
@@ -215,6 +217,7 @@ class WitnessQuestionedEvent(DomainEvent):
     statements: tuple[str, ...]
     leads: tuple[str, ...]
     first_conversation: bool
+    new_testimony: bool = True
 
 
 class AccusationResolvedEvent(DomainEvent):
@@ -295,7 +298,7 @@ def discovered_evidence_keys(
 
 
 class TalkToWitnessHandler:
-    """Hear a witness out, in authored order, and record one conversation."""
+    """Reveal only an opening statement or testimony matching the asked topic."""
 
     command_type = TALK_COMMAND_TYPE
 
@@ -334,13 +337,24 @@ class TalkToWitnessHandler:
         if session.case_key != witness.case_key:
             return rejected("that witness belongs to a different case")
 
-        statements = _testimony_for(ctx, witness.case_key, witness.witness_key)
+        topic = command.payload.get("topic")
+        if topic is not None and (not isinstance(topic, str) or len(topic) > 300):
+            return rejected("invalid interview topic")
+        authored = _testimony_for(ctx, witness.case_key, witness.witness_key)
+        statements = (authored[:1] if topic is None else [
+            item for item in authored if topic_matches(topic, item.statement, item.points_to_key)
+        ])
         recorded = _existing_conversation(
             ctx,
             case_key=witness.case_key,
             witness_key=witness.witness_key,
             character_id=character_id,
         )
+        prior = recorded.get_component(ArchiveConversationComponent) if recorded else None
+        known: set[str] = set()
+        if prior is not None:
+            known = (set(prior.testimony_keys) if prior.testimony_keys is not None
+                     else {item.testimony_key for item in authored})
         event = WitnessQuestionedEvent(
             **ctx.event_base(
                 visibility=EventVisibility.PRIVATE,
@@ -355,10 +369,24 @@ class TalkToWitnessHandler:
                     item.points_to_key for item in statements if item.points_to_key is not None
                 ),
                 first_conversation=recorded is None,
+                new_testimony=any(item.testimony_key not in known for item in statements),
             )
         )
         if recorded is not None:
-            return planned(MutationPlan(), event)
+            prior = recorded.get_component(ArchiveConversationComponent)
+            # A legacy full interview must never lose already acquired knowledge.
+            if prior.testimony_keys is None:
+                return planned(MutationPlan(), event)
+            keys = tuple(sorted(set(prior.testimony_keys) | {item.testimony_key for item in statements}))
+            if keys == prior.testimony_keys:
+                return planned(MutationPlan(), event)
+            return planned(MutationPlan((SetComponent(
+                entity_id=recorded.id,
+                component=ArchiveConversationComponent(
+                    case_key=prior.case_key, witness_key=prior.witness_key,
+                    first_heard_at_epoch=prior.first_heard_at_epoch, testimony_keys=keys,
+                ),
+            ),)), event)
 
         reference = EntityReference()
         return planned(
@@ -370,6 +398,7 @@ class TalkToWitnessHandler:
                                 case_key=witness.case_key,
                                 witness_key=witness.witness_key,
                                 first_heard_at_epoch=ctx.epoch,
+                                testimony_keys=tuple(sorted(item.testimony_key for item in statements)),
                             ),
                         ),
                         reference=reference,

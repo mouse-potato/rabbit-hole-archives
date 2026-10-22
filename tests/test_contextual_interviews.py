@@ -12,13 +12,15 @@ def test_receipt_question_returns_only_relevant_porter_statement() -> None:
     assert len(result["outcome"]["statements"]) == 1
     assert "desk receipt" in result["outcome"]["statements"][0]
     assert "arguing" not in str(result["outcome"]["statements"])
-    assert len(result["view"]["heard"]) == 2
+    assert len(result["view"]["heard"]) == 1
     assert result["view"]["discovered"] == []
 
 
-def test_unspecific_interview_keeps_full_canonical_account() -> None:
+def test_unspecific_interview_reveals_only_the_opening_statement() -> None:
     result = DemoGame().act("talk to porter")
-    assert len(result["outcome"]["statements"]) == 2
+    assert len(result["outcome"]["statements"]) == 1
+    assert "arguing" in result["outcome"]["statements"][0]
+    assert result["conversation"]["lead_topics"] == []
 
 
 def test_unknown_topic_cannot_fabricate_answer() -> None:
@@ -29,10 +31,12 @@ def test_unknown_topic_cannot_fabricate_answer() -> None:
     assert "spaceship" not in str(result["view"])
 
 
-def test_topic_specific_interview_keeps_authoritative_casebook() -> None:
+def test_topic_specific_interview_records_only_selected_testimony() -> None:
     targeted = DemoGame().act("ask Quill about receipt")
     complete = DemoGame().act("talk to porter")
-    assert targeted["view"]["heard"] == complete["view"]["heard"]
+    assert targeted["view"]["heard"] != complete["view"]["heard"]
+    assert len(targeted["view"]["heard"]) == 1
+    assert "arguing" not in str(targeted["view"]["heard"])
     assert targeted["view"]["solved"] is False
 
 
@@ -45,3 +49,4 @@ def test_topic_phrases_route_to_interview(player_text: str) -> None:
     result = DemoGame().act(player_text)
     assert result["outcome"]["accepted"] is True
     assert len(result["outcome"]["statements"]) == 1
+

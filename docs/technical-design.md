@@ -13,6 +13,7 @@ Make one **playable, understandable browser investigation**: explore, interview,
 - **Case authoring:** `packages/engine/src/rabbit_hole_engine` validates structured, versioned case definitions. Authoring data seeds the runtime; it is not a second mutable truth database.
 - **Runtime:** `packages/plugin/src/bunnyland_archives` uses a pinned Bunnyland ECS world for canonical case facts and mutable investigation state. Canonical history, evidence provenance, and the solution are distinct from discoveries and statements recorded by an investigator.
 - **Actions:** deterministic handlers perform examination, witness questioning, and accusation; player intent resolves to validated actions. Correctness is tested without a model. The current demo host can apply handler mutation plans synchronously; that is not proof of full asynchronous actor tick dispatch.
+- **Witness knowledge:** general interviews return an opening statement; focused questions unlock only matching authored testimony and leads. Mutable per-investigator conversation records accumulate statement keys. See [ADR-006](decisions/0006-statement-level-testimony.md), including legacy save compatibility.
 - **Narrator/client boundary:** restricted view and outcome packets expose only information appropriate for the player or Narrator. The client must never receive a raw world snapshot, sealed solution, or undiscovered clue content. The Narrator does not author or mutate canonical history.
 - **Persistence:** Bunnyland save/load has been exercised for the supported investigation state; this does **not** imply the local browser demo provides save/resume or individual sessions.
 
@@ -36,3 +37,4 @@ These boundaries describe useful existing behavior, not a requirement to expand 
 - [Visual style guide](design/visual-style-guide.md) — presentation direction.
 
 For the current browser-demo work, see its PR and `web/README.md`. Test and browser-playthrough results should be recorded on that PR. Do not create another parallel milestone checklist.
+

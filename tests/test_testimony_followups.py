@@ -20,6 +20,7 @@ def test_not_yet_interviewed_witness_has_no_testimony() -> None:
 def test_topic_followup_quotes_only_matching_porter_statement() -> None:
     game = DemoGame()
     game.act("talk to porter")
+    game.act("ask Quill about receipt")
     receipt = game.act("what did Quill say about the receipt?")
     assert receipt["outcome"]["action"] == "inquire"
     assert "Both names are on the desk receipt" in receipt["outcome"]["detail"]
@@ -32,6 +33,7 @@ def test_topic_followup_quotes_only_matching_porter_statement() -> None:
 def test_witness_followup_unknown_topic_does_not_invent() -> None:
     game = DemoGame()
     game.act("talk to porter")
+    game.act("ask Quill about receipt")
     result = game.act("what does Quill know about the train?")
     assert "does not address that topic" in result["outcome"]["detail"]
     assert "train" not in str(result["view"])
@@ -40,6 +42,7 @@ def test_witness_followup_unknown_topic_does_not_invent() -> None:
 def test_other_witness_cannot_reveal_unheard_testimony() -> None:
     game = DemoGame()
     game.act("talk to porter")
+    game.act("ask Quill about receipt")
     game.act("go to hall")
     result = game.act("what did Rosalind say about the glove?")
     assert "not recorded any testimony" in result["outcome"]["detail"]
@@ -62,6 +65,7 @@ def test_followup_does_not_call_model_or_mutate_casebook(
     monkeypatch.setattr(LocalAI, "_ask", responder)
     game = DemoGame(ai=ai)
     game.act("talk to porter")
+    game.act("ask Quill about receipt")
     requested.clear()
     before = game.packet()
     result = game.act("what did Porter say about the receipt?")
@@ -82,3 +86,4 @@ def test_other_inquiry_and_action_routes_unchanged(player_text: str) -> None:
     assert result["outcome"]["action"] != "inquire" or (
         "Your casebook records the witness saying" not in result["outcome"]["detail"]
     )
+

@@ -37,7 +37,7 @@ def test_help_and_lead_review_are_read_only_and_do_not_call_model(
 
 def test_lead_review_uses_only_heard_keys_and_discovery_status() -> None:
     game = DemoGame()
-    game.act("talk to porter")
+    game.act("ask Quill about receipt")
     before = game.packet()
     leads = game.act("review leads")
     assert "receipt (from porter): available to examine here" in leads["outcome"]["detail"]
