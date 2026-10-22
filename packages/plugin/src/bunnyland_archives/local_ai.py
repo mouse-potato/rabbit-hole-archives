@@ -12,6 +12,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
+
 def ollama_chat_endpoint(base_url: str) -> str:
     """Validate a trusted developer-configured Ollama server base URL.
 
@@ -41,9 +42,36 @@ def ollama_chat_endpoint(base_url: str) -> str:
 _ALLOWED_ACTIONS = ("go to", "examine", "talk to", "accuse")
 _TONES = {"neutral", "curious", "tense"}
 _FRAMES = {
-    "neutral": ("You continue your investigation.", "That attempt gets you no further."),
-    "curious": ("Another detail draws your attention.", "The question remains unanswered."),
-    "tense": ("The investigation sharpens.", "For now, the trail goes cold."),
+    "move": {
+        "neutral": "You take in your new surroundings.",
+        "curious": "A different corner of the house invites a closer look.",
+        "tense": "Each step into unfamiliar space brings another uncertainty.",
+    },
+    "examine": {
+        "neutral": "You turn your attention to the evidence.",
+        "curious": "A closer look reveals something worth recording.",
+        "tense": "The details demand careful scrutiny.",
+    },
+    "talk": {
+        "neutral": "You listen to the witness's account.",
+        "curious": "Another perspective may illuminate the case.",
+        "tense": "Every word could matter.",
+    },
+    "accuse": {
+        "neutral": "You put your theory to the test.",
+        "curious": "The evidence must speak for itself now.",
+        "tense": "The moment of accusation has arrived.",
+    },
+}
+_REJECTED = {
+    "neutral": "That action cannot be completed.",
+    "curious": "That avenue of inquiry is not available yet.",
+    "tense": "For now, the trail goes cold.",
+}
+_CLOSED = {
+    "neutral": "The case is closed.",
+    "curious": "The pieces of the mystery have fallen into place.",
+    "tense": "The final accusation settles the matter.",
 }
 
 
@@ -135,5 +163,17 @@ class LocalAI:
         tone = response.get("tone") if response else None
         if not isinstance(tone, str) or tone not in _TONES:
             tone = "neutral"
-        accepted = bool(outcome.get("accepted"))
-        return _FRAMES[tone][0 if accepted else 1]
+        if not outcome.get("accepted"):
+            return _REJECTED[tone]
+        if outcome.get("verdict") == "solved":
+            return _CLOSED[tone]
+        action = str(outcome.get("action", ""))
+        if action == "move":
+            return _FRAMES["move"][tone]
+        if "examine" in action:
+            return _FRAMES["examine"][tone]
+        if "talk" in action or "witness" in action:
+            return _FRAMES["talk"][tone]
+        if "accuse" in action:
+            return _FRAMES["accuse"][tone]
+        return "You consider what you have learned."

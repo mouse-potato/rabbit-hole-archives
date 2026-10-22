@@ -11,23 +11,42 @@ import re
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Lock
+from typing import Any
 from urllib.parse import urlsplit
 
 from bunnyland.core import (
-    ActionPointsComponent, CharacterComponent, ContainmentMode, Contains,
-    FocusPointsComponent, HandlerContext, IdentityComponent, InitiativeComponent,
-    LLMControllerComponent, WorldActor, container_of, spawn_entity,
+    ActionPointsComponent,
+    CharacterComponent,
+    ContainmentMode,
+    Contains,
+    FocusPointsComponent,
+    HandlerContext,
+    IdentityComponent,
+    InitiativeComponent,
+    LLMControllerComponent,
+    WorldActor,
+    container_of,
+    spawn_entity,
 )
 from bunnyland.plugins import apply_plugins
 from rabbit_hole_engine.authoring import CaseDefinition
 
-from .local_ai import LocalAI, ollama_chat_endpoint
-
 from . import (
-    ArchiveEvidenceComponent, ArchivePlaceComponent, ArchiveSuspectComponent,
-    InvestigatorSessionComponent, NarrationOutcome, NarrationPacket,
-    apply_handler_result, archive_plugin, build_packet, import_case, perform, resolve_intent,
+    ArchiveEvidenceComponent,
+    ArchivePlaceComponent,
+    ArchiveSuspectComponent,
+    InvestigatorSessionComponent,
+    NarrationOutcome,
+    NarrationPacket,
+    apply_handler_result,
+    archive_plugin,
+    build_packet,
+    import_case,
+    perform,
+    resolve_intent,
 )
+from .inquiry import SCENES, conversational_command, evidence_command, inquiry
+from .local_ai import LocalAI, ollama_chat_endpoint
 
 WEB_ROOT = Path(__file__).resolve().parents[4] / "web"
 CASE_PATH = Path(__file__).with_name("demo_case.json")
@@ -69,37 +88,38 @@ class DemoGame:
         self.character = character.id
         self.controller = controller.id
 
-    def _options(self) -> dict[str, object]:
+    def _options(self) -> dict[str, Any]:
         world = self.actor.world
         room = container_of(world.get_entity(self.character))
-        place_options = []
-        evidence_options = []
-        suspects = []
+        place_options: list[dict[str, str]] = []
+        evidence_options: list[dict[str, str]] = []
+        suspects: list[dict[str, str]] = []
         for entity in world.query().with_all([ArchivePlaceComponent]).execute_entities():
-            item = entity.get_component(ArchivePlaceComponent)
-            place_options.append({"key": item.place_key, "name": item.name})
+            place = entity.get_component(ArchivePlaceComponent)
+            place_options.append({"key": place.place_key, "name": place.name})
         for entity in world.query().with_all([ArchiveEvidenceComponent]).execute_entities():
-            item = entity.get_component(ArchiveEvidenceComponent)
+            evidence = entity.get_component(ArchiveEvidenceComponent)
             if container_of(entity) == room:
-                evidence_options.append({"key": item.evidence_key, "name": item.evidence_key.replace("-", " ").title()})
+                evidence_options.append({"key": evidence.evidence_key, "name": evidence.evidence_key.replace("-", " ").title()})
         for entity in world.query().with_all([ArchiveSuspectComponent]).execute_entities():
-            item = entity.get_component(ArchiveSuspectComponent)
-            suspects.append({"key": item.suspect_key, "name": item.name})
+            suspect = entity.get_component(ArchiveSuspectComponent)
+            suspects.append({"key": suspect.suspect_key, "name": suspect.name})
         return {"places": sorted(place_options, key=lambda x: x["key"]),
                 "evidence": sorted(evidence_options, key=lambda x: x["key"]),
                 "suspects": sorted(suspects, key=lambda x: x["key"])}
 
     def packet(
         self, packet: NarrationPacket | None = None, *, narrate: bool = False,
-    ) -> dict[str, object]:
+    ) -> dict[str, Any]:
         safe = (packet or build_packet(self.actor.world, self.character)).model_dump(mode="json")
         safe["options"] = self._options()
+        safe["scene_description"] = SCENES.get(str(safe["view"]["place_key"]), "")
         safe["ai_enabled"] = self.ai is not None
         if narrate and self.ai is not None:
             safe["narration"] = self.ai.narrate(safe)
         return safe
 
-    def _ai_options(self) -> dict[str, object]:
+    def _ai_options(self) -> dict[str, Any]:
         options = self._options()
         view = build_packet(self.actor.world, self.character).view
         options["witnesses"] = [
@@ -108,7 +128,7 @@ class DemoGame:
         ]
         return options
 
-    def act(self, text: str) -> dict[str, object]:
+    def act(self, text: str) -> dict[str, Any]:
         if len(text) > 300:
             return self.packet(NarrationPacket(
                 view=build_packet(self.actor.world, self.character).view,
@@ -124,6 +144,31 @@ class DemoGame:
                     detail="This case is closed. Start a new investigation to act again.",
                 ),
             ))
+        # Questions and scene inspection are read-only, handled before the
+        # model can mistakenly turn an inquiry into movement or examination.
+        public = self.packet()
+        answer = inquiry(text, public)
+        if answer is not None:
+            return self.packet(NarrationPacket(
+                view=build_packet(self.actor.world, self.character).view,
+                outcome=NarrationOutcome(action="inquire", accepted=True, detail=answer),
+            ), narrate=False)
+        # Reliable, narrowly scoped offline interpretation for visible evidence.
+        # This also works when Ollama returns no usable proposal.
+        recognized = evidence_command(text, public["options"])
+        if recognized is None:
+            recognized = conversational_command(text, self._ai_options())
+        if recognized is not None:
+            text = recognized
+        elif re.search(r"\b(?:accuse|accusing|charge|blame)\b", text.lower()):
+            # Do not let inference silently substitute a different suspect.
+            return self.packet(NarrationPacket(
+                view=build_packet(self.actor.world, self.character).view,
+                outcome=NarrationOutcome(
+                    action="accuse", accepted=False,
+                    detail="That person is not among the listed suspects.",
+                ),
+            ), narrate=True)
         # A model may suggest a public option but cannot execute arbitrary commands.
         # Known deterministic inputs continue to run without inference.
         # Preserve the existing reliable parser, especially button commands.

@@ -22,6 +22,14 @@ You can use the accessible action buttons or type commands:
 - `examine glove`
 - `accuse ada`
 
+You can also ask read-only questions such as `what's in the hall?`,
+`look around`, `what do I know?`, or `review my evidence`.
+Scene inquiries describe only the current location and visible targets; casebook
+inquiries repeat only recorded observations and statements. Questions about
+unknown or sealed details return an uncertainty response rather than invented
+answers. Inquiry does not move the player or discover new evidence, and works
+without Ollama.
+
 An unsuccessful accusation does not reveal whether the suspect was wrong or the evidence insufficient. Interviewing witnesses is optional but provides useful leads.
 
 ## Optional home-server AI (Ollama)
