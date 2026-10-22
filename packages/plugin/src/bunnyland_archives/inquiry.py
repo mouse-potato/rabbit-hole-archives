@@ -99,7 +99,7 @@ def conversational_command(text: str, options: dict[str, Any]) -> str | None:
 
 
 _TOPIC_STOPWORDS = frozenset({
-    "what", "did", "does", "do", "know", "think", "say", "said", "heard",
+    "what", "did", "does", "do", "know", "think", "say", "said", "heard", "hear",
     "about", "anything", "something", "the", "a", "an", "of", "to",
     "from", "me", "you", "he", "she", "they", "his", "her", "their",
     "witness", "tell", "could",
@@ -116,7 +116,7 @@ def testimony_inquiry(text: str, view: dict[str, Any]) -> str | None:
     normalized = _clean(text)
     if not (
         re.match(r"^(?:what|did|does|has|had|who|how)\b", normalized)
-        and re.search(r"\b(?:know|say|said|heard|tell|mention)\b", normalized)
+        and re.search(r"\b(?:know|say|said|heard|hear|tell|mention)\b", normalized)
     ):
         return None
 
