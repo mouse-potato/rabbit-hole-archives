@@ -34,6 +34,7 @@ class ArchivePlaceComponent(Component):
 
     place_key: str
     name: str
+    description: str | None = None
 
 
 @dataclass(frozen=True)
@@ -60,6 +61,7 @@ class ArchiveWitnessComponent(Component):
     witness_key: str
     name: str
     place_key: str
+    appearance: str | None = None
 
 
 @dataclass(frozen=True)
