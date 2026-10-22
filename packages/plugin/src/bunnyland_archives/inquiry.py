@@ -187,6 +187,22 @@ def inquiry(text: str, packet: dict[str, Any]) -> str | None:
         or bool(re.match(r"^(?:what|what's|what is|describe|tell me about)\b", normalized))
         and bool(re.search(r"\b(?:here|room|scene|surroundings|around me|study|hall)\b", normalized))
     )
+    # Descriptions may answer only for people visible in the current packet.
+    # No facts about distant witnesses or sealed case details are projected.
+    appearance = bool(re.search(
+        r"\\b(?:look like|appearance|describe|wearing|dressed)\\b", normalized,
+    ))
+    if appearance:
+        for witness in view.get("witnesses", []):
+            name = str(witness["name"]).lower()
+            key = str(witness["witness_key"])
+            aliases = {key, name, *name.split()}
+            if any(re.search(r"\\b" + re.escape(alias) + r"\\b", normalized)
+                   for alias in aliases):
+                description = packet.get("witness_descriptions", {}).get(key)
+                if description:
+                    return str(description)
+
     if scene_question:
         other = "hall" if current == "study" else "study"
         if re.search(r"\b" + re.escape(other) + r"\b", normalized):
@@ -195,7 +211,7 @@ def inquiry(text: str, packet: dict[str, Any]) -> str | None:
         people = [
             str(item["name"]) for item in view.get("witnesses", [])
         ]
-        detail = SCENES.get(current, f"You are in {current_name}.")
+        detail = str(packet.get("scene_description") or SCENES.get(current, f"You are in {current_name}."))
         if items:
             detail += " You can examine: " + ", ".join(items) + "."
         if people:
@@ -218,7 +234,7 @@ def inquiry(text: str, packet: dict[str, Any]) -> str | None:
     if re.match(r"^(?:where|what)\b", normalized) and re.search(
         r"\b(?:am i|room am i|location|right now)\b", normalized
     ):
-        return SCENES.get(current, f"You are in {current_name}.")
+        return str(packet.get("scene_description") or SCENES.get(current, f"You are in {current_name}."))
     question = bool(
         re.match(
             r"^(?:who|what|where|when|why|how|does|did|can|could|is|was|tell me about)\b",
