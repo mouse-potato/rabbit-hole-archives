@@ -147,9 +147,8 @@ def test_questioning_returns_attributed_statements_in_authored_order() -> None:
     assert event.witness_key == "porter"  # type: ignore[attr-defined]
     assert event.statements == (  # type: ignore[attr-defined]
         "I heard raised voices in the study before the seal went missing.",
-        "There is a receipt on the desk that you should look at.",
     )
-    assert event.leads == ("receipt",)  # type: ignore[attr-defined]
+    assert event.leads == ()  # type: ignore[attr-defined]
     assert event.first_conversation is True  # type: ignore[attr-defined]
 
 
@@ -288,14 +287,15 @@ def test_unheard_testimony_never_reaches_the_projection() -> None:
     assert "did not come back for it" not in payload
 
 
-def test_heard_testimony_and_its_lead_reach_the_projection() -> None:
+def test_only_opening_testimony_reaches_the_projection() -> None:
     scenario = build_scenario()
     talk(scenario, scenario.imported.witnesses["porter"])
 
     view = narrator_projection(scenario)
 
-    assert [item.witness_key for item in view.heard] == ["porter", "porter"]
-    assert [item.lead_evidence_key for item in view.heard] == [None, "receipt"]
+    assert [item.witness_key for item in view.heard] == ["porter"]
+    assert [item.lead_evidence_key for item in view.heard] == [None]
+    assert "receipt on the desk" not in view.model_dump_json()
     assert "did not come back for it" not in view.model_dump_json()
 
 
@@ -313,3 +313,4 @@ def test_investigation_state_survives_save_and_reload() -> None:
     assert len(discovery_entities(reloaded)) == 1
     assert narrator_projection(reloaded) == before
     assert before.solved is True
+

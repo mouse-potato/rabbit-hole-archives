@@ -20,14 +20,15 @@ EXAMINE_EVIDENCE = define_action(
 
 TALK_TO_WITNESS = define_action(
     "talk-to-witness",
-    ("target_id",),
+    ("target_id", "topic"),
     tool_name="talk_to_witness",
     description=(
-        "Hear out a witness who is in your current location. Statements are attributed to "
-        "the witness, arrive in a fixed order, and may point you toward a lead."
+        "Ask a witness in your current location about an optional topic. Without a topic, "
+        "hear only their opening statement. Record only matching authored testimony and leads."
     ),
     cost=ACTION_COST,
-    patterns=("talk {target_id}", "question {target_id}", "ask {target_id}"),
+    patterns=("talk {target_id}", "question {target_id}", "ask {target_id}",
+              "ask {target_id} about {topic}"),
 )
 
 ACCUSE_SUSPECT = define_action(
@@ -55,3 +56,4 @@ __all__ = [
     "EXAMINE_EVIDENCE",
     "TALK_TO_WITNESS",
 ]
+

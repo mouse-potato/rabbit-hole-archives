@@ -18,7 +18,9 @@ def test_followup_reuses_active_witness_and_only_authored_statements(text: str) 
     assert result["outcome"]["accepted"]
     assert len(result["outcome"]["statements"]) == 1
     assert "desk receipt" in result["outcome"]["statements"][0]
-    assert result["view"] == before["view"]
+    assert len(before["view"]["heard"]) == 1
+    assert len(result["view"]["heard"]) == 2
+    assert result["view"]["discovered"] == before["view"]["discovered"] == []
     assert result["conversation"] == {
         "witness_key": "porter", "name": "Porter Quill", "lead_topics": ["receipt"],
     }

@@ -7,7 +7,9 @@ These ADRs explain **why earlier decisions were made**, not requirements that mu
 - [ADR-003 — Privileged case import and the meaning of "sealed"](0003-trusted-import-and-sealing.md)
 - [ADR-004 — Neutral accusation verdicts](0004-neutral-accusation-verdicts.md)
 - [ADR-005 — Narration receives a packet, not the world](0005-narration-boundary.md)
+- [ADR-006 — Witness questions unlock individual statements](0006-statement-level-testimony.md)
 
 **Accepted** = current approach, revisitable; **Proposed** = undecided; **Superseded** = replaced or retired. A game-design choice such as accusation feedback can be changed after playtesting; its ADR captures the previous reasoning, not a permanent mandate.
 
 Only write or update an ADR when the rationale will materially help future contributors. Ground claims about Bunnyland in source or tests, and mark unverified assumptions clearly. Track actionable work in GitHub issues and PRs, not in parallel planning documents.
+

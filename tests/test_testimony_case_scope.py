@@ -26,10 +26,10 @@ def test_interview_and_projection_exclude_other_cases_before_and_after_reload() 
     assert narrator_projection(scenario).heard == ()
     result = talk(scenario, scenario.imported.witnesses["porter"])
     event = next(e for e in result.events if isinstance(e, WitnessQuestionedEvent))
-    assert len(event.statements) == 2
+    assert len(event.statements) == 1
     assert "PRIVATE_OTHER_CASE_TESTIMONY" not in str(event.statements)
     view = narrator_projection(scenario)
-    assert len(view.heard) == 2
+    assert len(view.heard) == 1
     assert "PRIVATE_OTHER_CASE_TESTIMONY" not in view.model_dump_json()
     assert canonical_snapshot(scenario) == before
 

@@ -161,14 +161,18 @@ def narrator_view(world: World, character_id: EntityId | str) -> ArchiveNarrator
         )
     )
 
-    heard_witnesses = {
-        entity.get_component(ArchiveConversationComponent).witness_key
+    conversations = [
+        entity.get_component(ArchiveConversationComponent)
         for entity in world.query()
         .with_all([ArchiveConversationComponent])
         .execute_entities()
         if entity.get_component(ArchiveConversationComponent).case_key == case_key
         and entity.has_relationship(ConversationBy, parsed)
-    }
+    ]
+    legacy_witnesses = {record.witness_key for record in conversations
+                        if record.testimony_keys is None}
+    heard_keys = {(record.witness_key, key) for record in conversations
+                  for key in record.testimony_keys or ()}
     statements = [
         entity.get_component(ArchiveTestimonyComponent)
         for entity in world.query()
@@ -183,7 +187,10 @@ def narrator_view(world: World, character_id: EntityId | str) -> ArchiveNarrator
         )
         for item in sorted(
             (item for item in statements
-             if item.case_key == case_key and item.witness_key in heard_witnesses),
+             if item.case_key == case_key and (
+                 item.witness_key in legacy_witnesses
+                 or (item.witness_key, item.testimony_key) in heard_keys
+             )),
             key=lambda item: (item.witness_key, item.order),
         )
     )

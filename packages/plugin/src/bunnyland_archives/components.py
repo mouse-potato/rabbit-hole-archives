@@ -118,11 +118,16 @@ class DiscoveryComponent(Component):
 
 @dataclass(frozen=True)
 class ArchiveConversationComponent(Component):
-    """Mutable: one record that an investigator has heard a witness out."""
+    """Mutable: statements heard by one investigator from one witness.
+
+    None preserves old saves whose interviews revealed the complete account.
+    New records always contain explicit keys, including () for no answer.
+    """
 
     case_key: str
     witness_key: str
     first_heard_at_epoch: int
+    testimony_keys: tuple[str, ...] | None = None
 
 
 @dataclass(frozen=True)
@@ -217,3 +222,4 @@ EDGE_TYPES: tuple[type, ...] = (
     AccusationBy,
     AccusationOf,
 )
+
