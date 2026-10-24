@@ -28,6 +28,9 @@ The demo also includes authored public descriptions of each room and its
 visible witnesses. Try `what does Porter Quill look like?` in the Study or
 `what does Rosalind look like?` after entering the Hall. These appearance
 answers are read-only and cannot reveal details from another location.
+The scene panel also displays appearances of people physically present, using
+the same public description packet; no remote-witness biography is included.
+
 
 Scene inquiries describe only the current location and visible targets; casebook
 inquiries repeat only recorded observations and statements. After you interview a\nwitness, try `what did Quill say about the receipt?` or `what did Rosalind\nsay about the glove?` to revisit matching testimony. This reads the existing\ncasebook and never generates new claims from an NPC. Questions about
