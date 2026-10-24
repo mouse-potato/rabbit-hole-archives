@@ -40,6 +40,17 @@ without Ollama.
 
 An unsuccessful accusation does not reveal whether the suspect was wrong or the evidence insufficient. Interviewing witnesses is optional but provides useful leads.
 
+### Authoring public narrative details
+
+Case authors may add optional `description` text to each `locations[]` entry
+and optional `appearance` text to each `witnesses[]` entry in schema v2.
+These are public descriptive facts—not investigation discoveries. On import,
+the ECS holds the canonical values, and the Narrator projection includes only
+the current room's description and the appearances of witnesses present there.
+Cases without either field remain valid; no solution, event, or undiscovered
+evidence text is projected. The Missing Seal now authors these details in
+`demo_case.json` rather than in a separate data file.
+
 ## Optional home-server AI (Ollama)
 
 The deterministic demo needs no model. If you already run Ollama on a shared

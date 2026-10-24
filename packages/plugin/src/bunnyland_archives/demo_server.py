@@ -50,9 +50,6 @@ from .local_ai import LocalAI, ollama_chat_endpoint, trusted_narration
 
 WEB_ROOT = Path(__file__).resolve().parents[4] / "web"
 CASE_PATH = Path(__file__).with_name("demo_case.json")
-PUBLIC_DESCRIPTIONS = json.loads(
-    Path(__file__).with_name("demo_public_descriptions.json").read_text(encoding="utf-8")
-)
 
 
 class DemoGame:
@@ -118,16 +115,13 @@ class DemoGame:
         safe = (packet or build_packet(self.actor.world, self.character)).model_dump(mode="json")
         safe["options"] = self._options()
         place_key = str(safe["view"]["place_key"])
-        safe["scene_description"] = PUBLIC_DESCRIPTIONS["scenes"].get(
-            place_key, SCENES.get(place_key, ""),
+        safe["scene_description"] = (
+            safe["view"].get("place_description") or SCENES.get(place_key, "")
         )
-        # Publish only visible witnesses' public appearance descriptions.
         safe["witness_descriptions"] = {
-            witness["witness_key"]: PUBLIC_DESCRIPTIONS["witnesses"][
-                witness["witness_key"]
-            ]["description"]
+            witness["witness_key"]: witness["appearance"]
             for witness in safe["view"]["witnesses"]
-            if witness["witness_key"] in PUBLIC_DESCRIPTIONS["witnesses"]
+            if witness.get("appearance")
         }
         safe["ai_enabled"] = self.ai is not None
         if narrate:

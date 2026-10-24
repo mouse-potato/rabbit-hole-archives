@@ -242,6 +242,7 @@ def test_projection_excludes_sealed_facts_and_undiscovered_evidence() -> None:
         "case_title",
         "place_key",
         "place_name",
+        "place_description",
         "discovered",
         "witnesses",
         "heard",
