@@ -45,7 +45,13 @@ from . import (
     perform,
     resolve_intent,
 )
-from .inquiry import SCENES, conversational_command, evidence_command, inquiry
+from .inquiry import (
+    SCENES,
+    conversational_command,
+    evidence_command,
+    focused_interview,
+    inquiry,
+)
 from .local_ai import LocalAI, approach_cue, ollama_chat_endpoint, trusted_narration
 
 WEB_ROOT = Path(__file__).resolve().parents[4] / "web"
@@ -268,8 +274,30 @@ class DemoGame:
             controller_generation=self.generation, resolution=resolved,
             apply=apply_handler_result,
         )
-        return self.packet(build_packet(self.actor.world, self.character, result,
-                                        action=resolved.command_type or ""), narrate=True, player_text=original_text)
+        narration_packet = build_packet(
+            self.actor.world, self.character, result,
+            action=resolved.command_type or "",
+        )
+        interview_outcome = narration_packet.outcome
+        if interview_outcome is not None and interview_outcome.accepted and "talk" in interview_outcome.action:
+            witness_key = resolved.target_key
+            if witness_key is not None:
+                heard = narration_packet.view.model_dump(mode="json")
+                selected = focused_interview(original_text, witness_key, heard)
+                if selected is not None:
+                    if selected:
+                        revised = interview_outcome.model_copy(update={"statements": selected})
+                    else:
+                        revised = interview_outcome.model_copy(update={
+                            "statements": (),
+                            "detail": "The witness's recorded account does not address that topic.",
+                        })
+                    narration_packet = narration_packet.model_copy(
+                        update={"outcome": revised},
+                    )
+        return self.packet(
+            narration_packet, narrate=True, player_text=original_text,
+        )
 
 
 def serve(host: str = "127.0.0.1", port: int = 8000) -> None:

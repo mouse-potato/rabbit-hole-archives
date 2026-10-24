@@ -38,7 +38,7 @@ unknown or sealed details return an uncertainty response rather than invented
 answers. Inquiry does not move the player or discover new evidence, and works
 without Ollama.
 
-Interviews can also acknowledge an explicit player approach, for example
+To ask a focused question, try `ask Quill about the receipt` or `question\nQuill regarding the receipt`. The Narrator displays only matching authored\ntestimony for that topic, while the casebook still records the witness's\ncanonical account. If the account does not address the topic, the Narrator\nsays so rather than inventing an answer.\n\nInterviews can also acknowledge an explicit player approach, for example
 `I cautiously ask Quill what he heard` or `I softly ask Rosalind`.
 The resulting Narrator cue describes **the investigator's own demeanor** only.
 It never changes testimony, NPC state, evidence or outcome; ambiguous
