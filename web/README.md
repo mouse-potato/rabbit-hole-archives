@@ -110,8 +110,10 @@ tone; it cannot supply new narrative content or override the current action.
 The Narrator now combines tone with an **authored, scene-specific atmospheric
 beat** for travel, inspection, witness interviews and accusations. These beats
 also work without Ollama. When AI is configured, the model may select the
-tone; it cannot write the final line. All actual observations, testimony, and
-verdicts continue to come from the game engine. We deliberately do not allow
+tone and, optionally, a focus ID for a public detail already recorded or a
+witness physically present. The server renders only an approved sentence for
+that exact ID; a model's own narrative text is ignored. All actual observations,
+testimony, and verdicts continue to come from the game engine. We deliberately do not allow
 the model to invent facts or produce unrestricted narrative prose in this
 first slice. Model calls are synchronous and may delay actions when the local
 model is slow or unavailable (8-second timeout per call).
