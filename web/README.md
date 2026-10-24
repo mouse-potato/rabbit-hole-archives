@@ -173,3 +173,18 @@ Then play through the case in the browser with mouse and keyboard, including one
 This is a localhost-only single-player development demo using real Bunnyland ECS components and action handlers. No LLM or API key is required. The browser receives restricted investigation packets, never sealed case data or world snapshots.
 
 The server has one shared in-memory session, reset on restart; no save/resume or individual profiles. Movement is a local demo operation rather than a registered Bunnyland movement action, and action plans apply synchronously rather than through full actor tick dispatch. The initial mystery is a tiny proof of interaction, not a finished narrative case. Do not publicly deploy this server.
+
+# Conversation follow-ups
+
+After an accepted interview, `what about the receipt?`, `tell me more about the
+receipt`, and `ask him/her/them about the receipt` address that same witness.
+Moving to another room or `end conversation` clears the addressee. Without an
+active conversation the host asks for a witness instead of guessing or calling
+the model. An unsuccessful interview clears the previous addressee as well.
+
+The public packet's optional `conversation` object contains `witness_key`,
+`name`, and `lead_topics` from already recorded testimony only. It introduces no
+NPC feelings or new testimony. As with the existing interview behavior, the
+casebook records the complete authored interview while a topic filters the
+immediate reply. This host context is temporary and has no save/resume promise.
+

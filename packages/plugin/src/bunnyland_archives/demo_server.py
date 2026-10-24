@@ -45,6 +45,7 @@ from . import (
     perform,
     resolve_intent,
 )
+from .conversation import conversation_view, followup_topic
 from .inquiry import (
     SCENES,
     conversational_command,
@@ -94,6 +95,7 @@ class DemoGame:
         self.character = character.id
         self.controller = controller.id
         self._narration_turn = 0
+        self._active_witness: str | None = None
 
     def _options(self) -> dict[str, Any]:
         world = self.actor.world
@@ -131,6 +133,7 @@ class DemoGame:
             if witness.get("appearance")
         }
         safe["ai_enabled"] = self.ai is not None
+        safe["conversation"] = conversation_view(self._active_witness, safe["view"])
         if narrate:
             variation = self._narration_turn % 3
             self._narration_turn += 1
@@ -176,6 +179,27 @@ class DemoGame:
         # Questions and scene inspection are read-only, handled before the
         # model can mistakenly turn an inquiry into movement or examination.
         public = self.packet()
+        topic = followup_topic(text)
+        if text.strip().lower() == "end conversation":
+            self._active_witness = None
+            return self.packet(NarrationPacket(
+                view=build_packet(self.actor.world, self.character).view,
+                outcome=NarrationOutcome(
+                    action="inquire", accepted=True, detail="You end the conversation.",
+                ),
+            ))
+        if topic is not None:
+            active = public["conversation"]
+            if active is None:
+                return self.packet(NarrationPacket(
+                    view=build_packet(self.actor.world, self.character).view,
+                    outcome=NarrationOutcome(
+                        action="inquire", accepted=False,
+                        detail="Name a witness here to begin a conversation first.",
+                    ),
+                ))
+            text = f"ask {active['witness_key']} about {topic}"
+            original_text = text
         answer = inquiry(text, public)
         if answer is not None:
             return self.packet(NarrationPacket(
@@ -248,6 +272,7 @@ class DemoGame:
                         action="move", accepted=True, detail="You are already here.",
                     )
                 else:
+                    self._active_witness = None
                     if current is not None:
                         world.get_entity(current).remove_relationship(Contains, self.character)
                     target.add_relationship(
@@ -263,6 +288,8 @@ class DemoGame:
 
         resolved = resolve_intent(self.actor.world, text)
         if resolved.status != "resolved":
+            if resolved.command_type == "talk-to-witness":
+                self._active_witness = None
             return self.packet(NarrationPacket(
                 view=build_packet(self.actor.world, self.character).view,
                 outcome=NarrationOutcome(action=resolved.command_type or "",
@@ -279,6 +306,11 @@ class DemoGame:
             action=resolved.command_type or "",
         )
         interview_outcome = narration_packet.outcome
+        if resolved.command_type == "talk-to-witness":
+            self._active_witness = (
+                resolved.target_key
+                if interview_outcome is not None and interview_outcome.accepted else None
+            )
         if interview_outcome is not None and interview_outcome.accepted and "talk" in interview_outcome.action:
             witness_key = resolved.target_key
             if witness_key is not None:
@@ -363,3 +395,4 @@ def serve(host: str = "127.0.0.1", port: int = 8000) -> None:
 
 if __name__ == "__main__":
     serve()
+
