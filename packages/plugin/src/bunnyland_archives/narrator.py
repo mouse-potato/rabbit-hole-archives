@@ -85,6 +85,10 @@ class NarrationOutcome(BaseModel):
     observation: str | None = None
     statements: tuple[str, ...] = ()
     verdict: str | None = None
+    witness_key: str | None = None
+    witness_name: str | None = None
+    first_discovery: bool | None = None
+    first_conversation: bool | None = None
 
 
 class NarrationPacket(BaseModel):
@@ -269,10 +273,12 @@ def build_packet(
     view = narrator_view(world, character_id)
     if result is None:
         return NarrationPacket(view=view)
-    return NarrationPacket(view=view, outcome=_public_outcome(result, action))
+    return NarrationPacket(view=view, outcome=_public_outcome(result, action, view))
 
 
-def _public_outcome(result: HandlerResult, action: str) -> NarrationOutcome:
+def _public_outcome(
+    result: HandlerResult, action: str, view: ArchiveNarratorView,
+) -> NarrationOutcome:
     if not result.ok:
         return NarrationOutcome(action=action, accepted=False, detail=result.reason)
     for event in result.events:
@@ -281,12 +287,17 @@ def _public_outcome(result: HandlerResult, action: str) -> NarrationOutcome:
                 action=COMMAND_TYPE,
                 accepted=True,
                 observation=event.observation,
+                first_discovery=event.first_discovery,
             )
         if isinstance(event, WitnessQuestionedEvent):
             return NarrationOutcome(
                 action=TALK_COMMAND_TYPE,
                 accepted=True,
                 statements=event.statements,
+                witness_key=event.witness_key,
+                witness_name=next((w.name for w in view.witnesses
+                                   if w.witness_key == event.witness_key), None),
+                first_conversation=event.first_conversation,
             )
         if isinstance(event, AccusationResolvedEvent):
             return NarrationOutcome(
@@ -305,3 +316,4 @@ __all__ = [
     "perform",
     "resolve_intent",
 ]
+

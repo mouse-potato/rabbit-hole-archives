@@ -174,7 +174,7 @@ This is a localhost-only single-player development demo using real Bunnyland ECS
 
 The server has one shared in-memory session, reset on restart; no save/resume or individual profiles. Movement is a local demo operation rather than a registered Bunnyland movement action, and action plans apply synchronously rather than through full actor tick dispatch. The initial mystery is a tiny proof of interaction, not a finished narrative case. Do not publicly deploy this server.
 
-# Conversation follow-ups
+## Conversation follow-ups
 
 After an accepted interview, `what about the receipt?`, `tell me more about the
 receipt`, and `ask him/her/them about the receipt` address that same witness.
@@ -187,4 +187,11 @@ The public packet's optional `conversation` object contains `witness_key`,
 NPC feelings or new testimony. As with the existing interview behavior, the
 casebook records the complete authored interview while a topic filters the
 immediate reply. This host context is temporary and has no save/resume promise.
+
+Narration distinguishes the first examination/interview from a review using
+public outcome flags, and identifies an interviewed witness by their visible
+name. Unknown-topic replies acknowledge that the recorded account has no answer.
+During an interview the model's optional focus is limited to that speaker and
+the statements in the immediate reply. Focus choices include reviewed text so
+the model can select a relevant ID; model-authored prose is still discarded.
 

@@ -84,7 +84,7 @@ def test_demo_uses_model_proposal_but_engine_remains_authoritative(
     response = game.act("Please ask that fellow Quill what he saw")
     assert response["outcome"]["accepted"] is True
     assert len(response["view"]["heard"]) == 2
-    assert response["narration"] == ("Another perspective may illuminate the case. "
+    assert response["narration"] == ("You listen as Porter Quill gives their account. "
                                        "In the quiet study, a witness\'s words seem to carry further.")
     assert "solution" not in str(seen)
     assert "culprit" not in str(seen)
@@ -140,3 +140,4 @@ def test_configured_remote_ollama_endpoint(monkeypatch: pytest.MonkeyPatch) -> N
     assert game.ai is not None
     assert game.ai.model == "already-installed-model"
     assert game.ai.endpoint == "http://192.168.1.50:11434/api/chat"
+

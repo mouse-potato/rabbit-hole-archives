@@ -12,8 +12,10 @@ def test_repeated_actions_receive_distinct_reviewed_scene_beats() -> None:
     game = DemoGame()
     results = [game.act("examine receipt") for _ in range(4)]
     lines = [result["narration"] for result in results]
-    assert len(set(lines[:3])) == 3
-    assert lines[0] == lines[3]
+    assert len(set(lines[1:4])) == 3
+    assert all(line != lines[0] for line in lines[1:])
+    assert results[0]["outcome"]["first_discovery"] is True
+    assert all(result["outcome"]["first_discovery"] is False for result in results[1:])
     assert all(result["outcome"]["accepted"] for result in results)
     assert len(results[-1]["view"]["discovered"]) == 1
 
@@ -64,3 +66,4 @@ def test_rejected_outcomes_stay_rejected_for_every_variation() -> None:
     assert {trusted_narration(packet, variation=n) for n in range(5)} == {
         "That action cannot be completed."
     }
+

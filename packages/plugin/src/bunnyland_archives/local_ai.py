@@ -173,6 +173,21 @@ def trusted_narration(
     if outcome.get("verdict") == "solved":
         return _CLOSED[tone]
     action = str(outcome.get("action", ""))
+    # Public handler metadata distinguishes revisiting a fact from discovering
+    # it. Templates never invent a reaction, a recollection, or fresh testimony.
+    if "examine" in action and outcome.get("first_discovery") is False:
+        return (
+            "You review the evidence already recorded in your casebook.",
+            "You check the recorded observation again.",
+            "Another examination confirms the same recorded detail.",
+        )[variation % 3]
+    if "talk" in action or "witness" in action:
+        name = outcome.get("witness_name")
+        speaker = name if isinstance(name, str) and name else "the witness"
+        if not outcome.get("statements"):
+            return f"You put the question to {speaker}. The recorded account offers no answer on that topic."
+        if outcome.get("first_conversation") is False:
+            return f"You return to {speaker}'s recorded account."
     kind = ""
     if action == "move":
         kind = "move"
@@ -185,6 +200,8 @@ def trusted_narration(
     if not kind:
         return "You consider what you have learned."
     frame = _FRAMES[kind][tone]
+    if kind == "talk":
+        frame = f"You listen as {speaker} gives their account."
     view = packet.get("view", {})
     place_key = str(view.get("place_key", "")) if isinstance(view, dict) else ""
     beat = _SCENE_BEATS.get(place_key, {}).get(kind, "")
@@ -209,18 +226,29 @@ def public_focus_options(packet: dict[str, Any]) -> dict[str, str]:
     if not outcome.get("accepted") or outcome.get("verdict") == "solved":
         return {}
     options: dict[str, str] = {}
+    interview = "talk" in str(outcome.get("action", ""))
+    speaker_key = outcome.get("witness_key")
     for witness in view.get("witnesses", []):
         if isinstance(witness, dict):
             key, name = witness.get("witness_key"), witness.get("name")
+            if interview and key != speaker_key:
+                continue
             if isinstance(key, str) and isinstance(name, str):
                 options[f"witness:{key}"] = f"Your attention returns to {name}."
     for clue in view.get("discovered", []):
+        if interview:
+            continue
         if isinstance(clue, dict):
             key, label = clue.get("evidence_key"), clue.get("label")
             if isinstance(key, str) and isinstance(label, str):
                 options[f"clue:{key}"] = f"The {label} remains in your casebook."
     for index, heard in enumerate(view.get("heard", [])):
         if isinstance(heard, dict) and isinstance(heard.get("statement"), str):
+            if interview and (
+                heard.get("witness_key") != speaker_key
+                or heard["statement"] not in outcome.get("statements", [])
+            ):
+                continue
             options[f"testimony:{index}"] = (
                 f'An earlier statement stays with you: “{heard["statement"]}”'
             )
@@ -323,9 +351,12 @@ class LocalAI:
             "observation": outcome.get("observation"),
             "statements": outcome.get("statements", []),
             "verdict": outcome.get("verdict"),
+            "witness_name": outcome.get("witness_name"),
+            "first_discovery": outcome.get("first_discovery"),
+            "first_conversation": outcome.get("first_conversation"),
         }
         focus_options = public_focus_options(packet)
-        public["focus_options"] = list(focus_options)
+        public["focus_options"] = focus_options
         response = self._ask(
             "Choose a literary tone for the already-authorized action result, "
             "plus an optional focus ID from focus_options. "
@@ -346,3 +377,4 @@ class LocalAI:
         elif focus is not None:
             self._debug("narration", "unavailable_focus_ignored")
         return line
+
