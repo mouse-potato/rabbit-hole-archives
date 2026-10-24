@@ -24,6 +24,11 @@ You can use the accessible action buttons or type commands:
 
 You can also ask read-only questions such as `what's in the hall?`,
 `look around`, `what do I know?`, or `review my evidence`.
+The demo also includes authored public descriptions of each room and its
+visible witnesses. Try `what does Porter Quill look like?` in the Study or
+`what does Rosalind look like?` after entering the Hall. These appearance
+answers are read-only and cannot reveal details from another location.
+
 Scene inquiries describe only the current location and visible targets; casebook
 inquiries repeat only recorded observations and statements. After you interview a\nwitness, try `what did Quill say about the receipt?` or `what did Rosalind\nsay about the glove?` to revisit matching testimony. This reads the existing\ncasebook and never generates new claims from an NPC. Questions about
 unknown or sealed details return an uncertainty response rather than invented

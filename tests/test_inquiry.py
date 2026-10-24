@@ -58,12 +58,12 @@ def test_casebook_review_reveals_only_recorded_information() -> None:
     assert "culprit_match" not in str(response)
 
 
-def test_unknown_questions_do_not_invent_witness_appearance() -> None:
+def test_authored_witness_appearance_is_read_only() -> None:
     game = DemoGame()
     before = game.packet()
     response = game.act("what does porter quill look like?")
     assert response["outcome"]["action"] == "inquire"
-    assert "does not establish" in response["outcome"]["detail"]
+    assert "dark waistcoat" in response["outcome"]["detail"]
     assert response["view"] == before["view"]
 
 
