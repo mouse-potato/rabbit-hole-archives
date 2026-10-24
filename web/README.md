@@ -77,6 +77,11 @@ unavailable, or malformed model responses fall back to the deterministic
 parser and can be rejected. Ordinary known commands keep their deterministic
 behavior. This is **not** freeform, topic-specific NPC dialogue yet.
 
+The Narrator cycles through three reviewed atmospheric beats for repeated
+actions in each scene. This variation works offline and doesn't change the
+casebook, recorded testimony, clues, or verdicts. The model still only chooses
+tone; it cannot supply new narrative content or override the current action.
+
 The Narrator now combines tone with an **authored, scene-specific atmospheric
 beat** for travel, inspection, witness interviews and accusations. These beats
 also work without Ollama. When AI is configured, the model may select the
