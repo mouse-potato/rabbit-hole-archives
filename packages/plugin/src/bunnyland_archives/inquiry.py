@@ -16,7 +16,44 @@ SCENES = {
 
 
 def _clean(text: str) -> str:
-    return " ".join(re.sub(r"[^a-z0-9\s'-]", " ", text.lower()).split())
+    return " ".join(re.sub(r"[^a-z0-9\s'-]", " ", text.lower().replace("’", "'")).split())
+
+
+def request_problem(text: str) -> str | None:
+    """Decline negated, conditional, or compound actions before any inference.
+
+    This is a conservative supported-command boundary, not a general natural
+    language parser. Unclear requests need a new explicit player instruction.
+    """
+    normalized = _clean(text)
+    categories = {
+        "examine": r"\b(?:examine|inspect|look at)\b",
+        "talk": r"\b(?:talk to|talk with|speak to|speak with|interview|ask|question)\b",
+        "move": r"\b(?:go|move|travel|walk|enter|visit)\b",
+        "accuse": r"\b(?:accuse|accusing|charge|blame)\b",
+    }
+    requested = {key for key, pattern in categories.items() if re.search(pattern, normalized)}
+    if not requested and re.search(r"\bstudy\b", normalized):
+        requested.add("examine")
+    if not requested:
+        return None
+    if re.search(r"\b(?:don't|dont|do not|never|not|won't|will not|without|avoid|cancel|stop)\b", normalized):
+        return "No action taken. State the action you want to carry out."
+    if re.search(r"\b(?:if|unless|maybe|might|should i)\b", normalized):
+        return "No action taken. Give a definite action when you are ready."
+    action_words = r"(?:examine|inspect|study|look at|talk|speak|interview|ask|question|go|move|travel|walk|enter|visit|accuse|charge|blame)"
+    another_action = re.search(
+        r"(?:\b(?:and|then|or)\b|[;,])\s*(?:i\s+)?" + action_words + r"\b",
+        text.lower(),
+    )
+    # Conjunctions in a witness topic are allowed (e.g. Halloran and Ada).
+    # Conjunctions in the requested target are ambiguous and must not select
+    # the first matching entity through the lower-level prefix parser.
+    target_part = re.split(r"\b(?:about|regarding|concerning)\b", normalized, maxsplit=1)[0]
+    multiple_targets = re.search(r"\b(?:and|or|then)\b", target_part)
+    if len(requested) > 1 or another_action or multiple_targets:
+        return "No action taken. Request one action and one target at a time."
+    return None
 
 
 
@@ -290,3 +327,4 @@ def inquiry(text: str, packet: dict[str, Any]) -> str | None:
                 return str(clue["observation"])
         return "The information recorded so far does not establish an answer to that question."
     return None
+
