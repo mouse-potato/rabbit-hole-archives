@@ -257,6 +257,36 @@ def inquiry(text: str, packet: dict[str, Any]) -> str | None:
     current = str(view.get("place_key", ""))
     current_name = str(view.get("place_name", "this room"))
 
+    if normalized in {"help", "what can i do", "what should i do next", "available actions"}:
+        commands = [f"examine {item['key']}" for item in options.get("evidence", [])]
+        commands.extend(f"talk to {item['witness_key']}" for item in view.get("witnesses", []))
+        commands.extend(f"go to {item['key']}" for item in options.get("places", [])
+                        if item["key"] != current)
+        commands.extend(["review casebook", "review leads"])
+        return (
+            "Available commands here: " + "; ".join(commands) + ". "
+            "During a conversation, ask 'what about <topic>?'. "
+            "When ready, use 'accuse <suspect>'. "
+            "Use 'restart investigation' to begin the authored case again."
+        )
+
+    if normalized in {"review leads", "what leads do i have", "show leads"}:
+        discovered_keys = {item["evidence_key"] for item in view.get("discovered", [])}
+        visible_keys = {item["key"] for item in options.get("evidence", [])}
+        leads = sorted({
+            (str(item["lead_evidence_key"]), str(item["witness_key"]))
+            for item in view.get("heard", []) if item.get("lead_evidence_key")
+        })
+        if not leads:
+            return "You have no leads recorded from witness testimony yet."
+        lines = []
+        for key, witness in leads:
+            status = ("examined" if key in discovered_keys else
+                      "available to examine here" if key in visible_keys else
+                      "not available to examine here")
+            lines.append(f"{key} (from {witness}): {status}")
+        return "Your recorded leads: " + "; ".join(lines) + "."
+
     scene_question = (
         normalized in {"look around", "describe the room", "describe the scene", "where am i"}
         or bool(re.match(r"^(?:what|what's|what is|describe|tell me about)\b", normalized))

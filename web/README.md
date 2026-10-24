@@ -201,3 +201,27 @@ inside a witness topic remain supported. Formal accusations require an explicit,
 uniquely named player request; fallback model proposals cannot select accusation.
 This conservative command handling does not claim general language understanding.
 
+## Repeatable playtesting
+
+`help` lists commands for the current public room, and `review leads` lists only
+evidence keys mentioned in testimony already recorded, with their examination
+status. These commands neither call inference nor discover clues, reveal remote
+locations, select a suspect, or consult the solution.
+
+`restart investigation` (or `new investigation`) deliberately discards the shared
+in-memory investigation and loads a fresh world from the same authored demo file.
+It works after a solved case too, resets conversation context and narration
+rotation, and keeps the configured inference backend. This is replay, not case
+generation. There is still one shared localhost session and no save/resume.
+
+### Next NPC decision
+
+Current topic filtering changes the immediate reply; the first accepted interview
+records the witness's whole authored account. Unlocking individual statements
+only when their topics are asked would change the knowledge model. Decide before
+implementing that: keep full interviews with focused follow-ups, or introduce
+statement-level discovery with explicit authored topics and new persistence rules.
+The latter needs a policy for broad interviews, unknown topics, topic aliases,
+existing saves, and how players learn which topics they can ask. Neither option
+changes the immutable underlying events, evidence, statements, or solution.
+
