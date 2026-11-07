@@ -81,7 +81,7 @@ def test_demo_uses_model_proposal_but_engine_remains_authoritative(
 
     monkeypatch.setattr(LocalAI, "_ask", responder)
     game = DemoGame(ai=ai)
-    response = game.act("Please ask that fellow Quill what he saw")
+    response = game.act("I would like a word with the person by the doorway")
     assert response["outcome"]["accepted"] is True
     assert len(response["view"]["heard"]) == 1
     assert response["narration"] == ("You listen as Porter Quill gives their account. "
