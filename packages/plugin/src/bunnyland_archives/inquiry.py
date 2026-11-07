@@ -19,6 +19,48 @@ def _clean(text: str) -> str:
     return " ".join(re.sub(r"[^a-z0-9\s'-]", " ", text.lower().replace("’", "'")).split())
 
 
+def action_text(text: str) -> str:
+    # Strip supported lead-ins without changing the request.
+    return re.sub(
+        r"^(?:please |carefully |let's |i'll |i (?:want to |would like to |will )?"
+        r"|i'd like to |(?:can|could|may|would) (?:i|you) )+",
+        "", _clean(text),
+    ).removesuffix(" please")
+
+
+_ACCUSATION = r"(?:accuse|charge|j'accuse)"
+_MOVEMENT = r"(?:(?:go|move|travel|walk)(?: back)?(?: to| into)?|enter|visit)"
+_EXIT_QUESTION = (
+    r"(?:where can i go(?: from here)?|where (?:does|can) .+ connect to|"
+    r"(?:what|where) (?:are|is) (?:the |my )?(?:exits?|ways? out)(?: from here)?)"
+)
+
+
+def is_accusation(text: str) -> bool:
+    return bool(re.match(rf"^{_ACCUSATION}\b", action_text(text)))
+
+
+def place_aliases(place: dict[str, str]) -> set[str]:
+    aliases = {_clean(place["key"].replace("-", " ")), _clean(place["name"]).removeprefix("the ")}
+    if "hall" in aliases or "hallway" in aliases:
+        aliases.update(("hall", "hallway"))
+    return aliases
+
+
+def movement_target(text: str) -> str | None:
+    match = re.fullmatch(rf"{_MOVEMENT} (.+)", action_text(text))
+    return match[1].removeprefix("the ") if match else None
+
+
+def available_destinations(packet: dict[str, Any]) -> list[dict[str, str]]:
+    # This demo's navigation supports every listed room. The side door is
+    # scene description only and is absent from the playable destinations.
+    return [
+        place for place in packet["options"]["places"]
+        if place["key"] != packet["view"]["place_key"]
+    ]
+
+
 def request_problem(text: str) -> str | None:
     """Decline negated, conditional, or compound actions before any inference.
 
@@ -27,12 +69,14 @@ def request_problem(text: str) -> str | None:
     """
     normalized = _clean(text)
     categories = {
-        "examine": r"\b(?:examine|inspect|look at)\b",
+        "examine": r"\b(?:examine|inspect|look at|look around)\b",
         "talk": r"\b(?:talk to|talk with|speak to|speak with|interview|ask|question)\b",
         "move": r"\b(?:go|move|travel|walk|enter|visit)\b",
-        "accuse": r"\b(?:accuse|accusing|charge|blame)\b",
+        "accuse": rf"\b(?:{_ACCUSATION}|accusing|blame)\b",
     }
     requested = {key for key, pattern in categories.items() if re.search(pattern, normalized)}
+    if re.match(r"^leave\b", action_text(text)):
+        requested.add("move")
     if not requested and re.search(r"\bstudy\b", normalized):
         requested.add("examine")
     if not requested:
@@ -41,7 +85,7 @@ def request_problem(text: str) -> str | None:
         return "No action taken. State the action you want to carry out."
     if re.search(r"\b(?:if|unless|maybe|might|should i)\b", normalized):
         return "No action taken. Give a definite action when you are ready."
-    action_words = r"(?:examine|inspect|study|look at|talk|speak|interview|ask|question|go|move|travel|walk|enter|visit|accuse|charge|blame)"
+    action_words = rf"(?:examine|inspect|study|look at|look around|talk|speak|interview|ask|question|go|move|travel|walk|enter|visit|leave|{_ACCUSATION}|blame)"
     another_action = re.search(
         r"(?:\b(?:and|then|or)\b|[;,])\s*(?:i\s+)?" + action_words + r"\b",
         text.lower(),
@@ -65,7 +109,16 @@ def evidence_command(text: str, options: dict[str, Any]) -> str | None:
     verb and a uniquely matching visible item.
     """
     normalized = _clean(text)
-    requested = bool(re.search(r"\b(?:examine|inspect|study|look at|take a look at)\b", normalized))
+    target = re.fullmatch(r"(?:examine|inspect|study|look at|take a look at) (.+)", action_text(text))
+    requested = target is not None
+    if target and re.fullmatch(
+        r"(?:the )?(?:paperwork(?: on (?:the )?desk)?|desk paperwork)", target[1],
+    ):
+        # The scene describes the receipt as desk paperwork. This alias is
+        # useful only while that particular exhibit is available to inspect.
+        if any(item["key"] == "receipt" for item in options.get("evidence", [])):
+            return "examine receipt"
+
     candidates: list[str] = []
     for item in options.get("evidence", []):
         key = str(item["key"])
@@ -107,30 +160,39 @@ def conversational_command(text: str, options: dict[str, Any]) -> str | None:
     normalized = _clean(text)
     if re.search(r"\b(?:don't|do not|never|not going to)\b", normalized):
         return None
-    action: tuple[str, str] | None = None
-    if re.search(r"\b(?:accuse|accusing|charge|blame)\b", normalized):
-        action = ("accuse", "suspects")
-    elif re.search(r"\b(?:talk to|speak to|interview|ask|question)\b", normalized):
-        action = ("talk to", "witnesses")
-    elif re.search(r"\b(?:go to|travel to|walk to|enter|visit)\b", normalized):
-        action = ("go to", "places")
-    if action is None:
+    target = re.fullmatch(rf"{_ACCUSATION} (.+)", action_text(text))
+    if target:
+        name = target[1].removeprefix("the ").removeprefix("suspect ")
+        suspects = [
+            item["key"] for item in options.get("suspects", [])
+            if name in {
+                _clean(item["name"]), _clean(item["key"].replace("-", " ")),
+                _clean(item["name"]).split()[-1],
+            }
+        ]
+        return f"accuse {suspects[0]}" if len(suspects) == 1 else None
+    if is_accusation(text):
         return None
-    verb, group = action
+    interview = re.search(r"\b(?:talk to|speak to|interview|ask|question) (.+)", normalized)
+    if interview is None:
+        return None
+    addressee = re.split(
+        r"\b(?:about|regarding|concerning|what|why|when|how|whether)\b",
+        interview[1], maxsplit=1,
+    )[0]
     matched: list[str] = []
-    for item in options.get(group, []):
+    for item in options.get("witnesses", []):
         key = str(item["key"])
         names = {key.replace("-", " "), str(item["name"]).lower()}
         for name in names:
             # "Porter Quill" may be addressed as either "Porter" or "Quill".
             aliases = {name}
-            if group == "witnesses":
-                aliases.update(name.split())
-            if any(re.search(r"\b" + re.escape(alias) + r"\b", normalized) for alias in aliases):
+            aliases.update(name.split())
+            if any(re.search(r"\b" + re.escape(alias) + r"\b", addressee) for alias in aliases):
                 matched.append(key)
                 break
     if len(matched) == 1:
-        return verb + " " + matched[0]
+        return "talk to " + matched[0]
     return None
 
 
@@ -153,7 +215,7 @@ def testimony_inquiry(text: str, view: dict[str, Any]) -> str | None:
     normalized = _clean(text)
     if not (
         re.match(r"^(?:what|did|does|has|had|who|how)\b", normalized)
-        and re.search(r"\b(?:know|say|said|heard|hear|tell|mention)\b", normalized)
+        and re.search(r"\b(?:know|say|said|heard|hear|see|saw|tell|mention)\b", normalized)
     ):
         return None
 
@@ -181,6 +243,8 @@ def testimony_inquiry(text: str, view: dict[str, Any]) -> str | None:
     if not statements:
         return "You have not recorded any testimony from that witness yet."
 
+    if re.search(r"\b(?:anything else|something else|more details)\b", normalized):
+        return "Your recorded testimony from that witness does not address that topic. Try asking them about a specific lead."
     topics = set(normalized.split()) - _TOPIC_STOPWORDS
     for alias in names[witness_key]:
         topics.difference_update(alias.split())
@@ -206,19 +270,62 @@ def inquiry(text: str, packet: dict[str, Any]) -> str | None:
     than being guessed as a physical action by an LLM.
     """
     normalized = _clean(text)
+    view = packet["view"]
+    options = packet["options"]
+    current = str(view.get("place_key", ""))
+    current_name = str(view.get("place_name", "this room"))
+    command = action_text(text)
+    destinations = available_destinations(packet)
+    leave = re.fullmatch(r"leave(?: (.+))?", command)
+    if re.fullmatch(_EXIT_QUESTION, normalized) or (
+        leave and (leave[1] is None or any(
+            place["key"] == current and leave[1].removeprefix("the ") in place_aliases(place)
+            for place in options.get("places", [])
+        ))
+    ):
+        if destinations:
+            names = ", ".join(place["name"] for place in destinations)
+            return f"From {current_name}, you can go to {names}. Name your destination to move."
+        return "There are no other playable locations from here."
+
+    room_request = re.fullmatch(
+        r"(?:look around(?: (.+))?|(?:examine|inspect|look at) (.+))", command,
+    )
+    room_target = (room_request[1] or room_request[2] or "room") if room_request else ""
+    room_target = room_target.removeprefix("the ")
+    scene_inspection = room_target in {"room", "room i'm in", "room i am in", "current room", "surroundings", "here"}
+    if room_target:
+        for place in options.get("places", []):
+            if room_target not in place_aliases(place):
+                continue
+            if place["key"] != current:
+                return f"You are in {current_name}. Visit {place['name']} to look around there."
+            scene_inspection = True
+
+    if re.match(r"^compliment\b", command):
+        return "You can question witnesses about the case. Social exchanges like compliments have no authored response."
+
+    # A request for someone else's exact reply is different from asking about
+    # a topic. Shared names alone cannot establish what that person said.
+    if re.match(r"^ask .+ what (?:he|she|they) heard .+ say\b", command):
+        return (
+            "Your recorded testimony does not establish what was said in reply. "
+            "You can ask the witness about a specific topic or review your casebook."
+        )
+
+    if re.fullmatch(r"what (?:can|could) (?:i|we) (?:examine|inspect|look at)(?: (?:here|in this room))?", normalized):
+        names = ", ".join(item["name"] for item in options.get("evidence", []))
+        return f"You can examine {names} here." if names else "There is nothing available to examine here."
+
     # A polite request containing an executable verb is still an action.
     # In particular, do not steal "could you ask Quill" or
     # "can I go to the hall" from the existing AI interpreter.
-    if re.search(
+    if not scene_inspection and re.search(
         r"\b(?:go|travel|walk|move|enter|visit|ask|talk|speak|interview|question|"
         r"examine|inspect|look at|accuse|charge)\b",
         normalized,
     ) and re.search(r"\b(?:can|could|would|will|may|should|i|let|please|want)\b", normalized):
         return None
-    view = packet["view"]
-    options = packet["options"]
-    current = str(view.get("place_key", ""))
-    current_name = str(view.get("place_name", "this room"))
 
     if normalized in {"help", "what can i do", "what should i do next", "available actions"}:
         commands = [f"examine {item['key']}" for item in options.get("evidence", [])]
@@ -251,9 +358,9 @@ def inquiry(text: str, packet: dict[str, Any]) -> str | None:
         return "Your recorded leads: " + "; ".join(lines) + "."
 
     scene_question = (
-        normalized in {"look around", "describe the room", "describe the scene", "where am i"}
-        or bool(re.match(r"^(?:what|what's|what is|describe|tell me about)\b", normalized))
-        and bool(re.search(r"\b(?:here|room|scene|surroundings|around me|study|hall)\b", normalized))
+        scene_inspection or normalized in {"look around", "describe the room", "describe the scene", "where am i"}
+        or bool(re.match(r"^(?:what|what's|what is|describe|tell me about|is there anything else)\b", normalized))
+        and bool(re.search(r"\b(?:here|room|scene|surroundings|around me|study|hall|hallway)\b", normalized))
     )
     # Descriptions may answer only for people visible in the current packet.
     # No facts about distant witnesses or sealed case details are projected.
@@ -271,9 +378,13 @@ def inquiry(text: str, packet: dict[str, Any]) -> str | None:
                 if description:
                     return str(description)
 
+    remembered = testimony_inquiry(text, view)
+    if remembered is not None:
+        return remembered
+
     if scene_question:
         other = "hall" if current == "study" else "study"
-        if re.search(r"\b" + re.escape(other) + r"\b", normalized):
+        if not scene_inspection and re.search(r"\b" + (r"hall(?:way)?" if other == "hall" else other) + r"\b", normalized):
             return f"You are in {current_name}. You would need to visit the {other} to inspect it."
         items = [str(item["name"]) for item in options.get("evidence", [])]
         people = [
@@ -295,14 +406,13 @@ def inquiry(text: str, packet: dict[str, Any]) -> str | None:
         summary.extend(str(item["statement"]) for item in heard)
         return "Your casebook records: " + " ".join(summary)
 
-    remembered = testimony_inquiry(text, view)
-    if remembered is not None:
-        return remembered
-
     if re.match(r"^(?:where|what)\b", normalized) and re.search(
         r"\b(?:am i|room am i|location|right now)\b", normalized
     ):
         return str(packet.get("scene_description") or SCENES.get(current, f"You are in {current_name}."))
+    if re.search(r"\b(?:culprit|guilty|criminal|stole)\b", normalized) and not is_accusation(text):
+        if not re.match(r"^(?:who|what|why|how|did|is)\b", normalized):
+            return "You can weigh that theory against your casebook. To submit a formal accusation, use 'accuse <suspect>'."
     question = bool(
         re.match(
             r"^(?:who|what|where|when|why|how|does|did|can|could|is|was|tell me about)\b",

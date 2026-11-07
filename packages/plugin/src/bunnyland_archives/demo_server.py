@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Lock
@@ -48,9 +47,14 @@ from . import (
 from .conversation import conversation_view, followup_topic
 from .inquiry import (
     SCENES,
+    action_text,
+    available_destinations,
     conversational_command,
     evidence_command,
     inquiry,
+    is_accusation,
+    movement_target,
+    place_aliases,
     request_problem,
 )
 from .local_ai import LocalAI, approach_cue, ollama_chat_endpoint, trusted_narration
@@ -58,6 +62,27 @@ from .testimony import interview_topic
 
 WEB_ROOT = Path(__file__).resolve().parents[4] / "web"
 CASE_PATH = Path(__file__).with_name("demo_case.json")
+
+
+def _action_feedback(action: str, reason: str, public: dict[str, Any]) -> str:
+    if action == "examine-evidence":
+        names = ", ".join(item["name"] for item in public["options"]["evidence"])
+        next_step = f"Here you can examine {names}." if names else "There is nothing to examine here."
+        detail = (
+            "You cannot reach that item from here."
+            if reason == "you cannot examine that from here"
+            else "I couldn't identify one item to examine."
+        )
+        return f"{detail} {next_step}"
+    if action == "talk-to-witness":
+        names = ", ".join(witness["name"] for witness in public["view"]["witnesses"])
+        next_step = f"Here you can question {names}." if names else "There is no witness here."
+        detail = (
+            "That witness is not here." if reason == "they are not here to question"
+            else "I couldn't identify one witness to question."
+        )
+        return f"{detail} {next_step}"
+    return "I couldn't identify an investigative action. Try 'look around', 'review casebook', or 'help'."
 
 
 class DemoGame:
@@ -139,7 +164,7 @@ class DemoGame:
         }
         safe["ai_enabled"] = self.ai is not None
         safe["conversation"] = conversation_view(self._active_witness, safe["view"])
-        if narrate:
+        if narrate and (safe.get("outcome") or {}).get("accepted"):
             variation = self._narration_turn % 3
             self._narration_turn += 1
             safe["narration"] = (
@@ -233,43 +258,39 @@ class DemoGame:
             recognized = conversational_command(text, self._ai_options())
         if recognized is not None:
             text = recognized
-        elif re.search(r"\b(?:accuse|accusing|charge|blame)\b", text.lower()):
+        elif is_accusation(text):
             # Do not let inference silently substitute a different suspect.
             return self.packet(NarrationPacket(
                 view=build_packet(self.actor.world, self.character).view,
                 outcome=NarrationOutcome(
                     action="accuse", accepted=False,
-                    detail="That person is not among the listed suspects.",
+                    detail="Name one of the listed suspects in your accusation.",
                 ),
             ), narrate=True, player_text=original_text)
         # A model may suggest a public option but cannot execute arbitrary commands.
         # Known deterministic inputs continue to run without inference.
         # Preserve the existing reliable parser, especially button commands.
         # Only ask the model when deterministic parsing cannot resolve intent.
-        known_movement = re.match(
-            r"^(?:go to|move to|travel to|walk into|walk to|go|move|travel|enter|visit) ",
-            text.strip().lower(),
-        )
+        command = action_text(text)
+        if command.startswith((
+            "examine ", "inspect ", "look at ", "study ",
+            "ask ", "question ", "talk to ", "talk with ", "interview ", "speak to ",
+        )):
+            text = command
+        destination = movement_target(text)
         if (
             self.ai is not None
-            and known_movement is None
+            and destination is None
             and resolve_intent(self.actor.world, text).status != "resolved"
         ):
             inference_options = self._ai_options()
-            # A formal accusation requires a uniquely named explicit request;
-            # the deterministic accusation route above already handles those.
+            # Only explicit deterministic requests may formally accuse.
             inference_options["suspects"] = []
             proposed = self.ai.propose(text, inference_options)
             if proposed is not None:
                 text = proposed
-        normalized = re.sub(r"[^a-z0-9\s-]", " ", text.lower())
-        normalized = " ".join(normalized.split())
-        movement = re.fullmatch(
-            r"(?:go to|move to|travel to|walk into|walk to|go|move|travel|enter|visit) (.+)",
-            normalized,
-        )
-        if movement:
-            destination = re.sub(r"^(?:the|a|an) ", "", movement.group(1))
+                destination = movement_target(text)
+        if destination is not None:
             places = {
                 entity.get_component(ArchivePlaceComponent).place_key: entity
                 for entity in self.actor.world.query()
@@ -277,15 +298,16 @@ class DemoGame:
             }
             matches = [
                 entity for key, entity in places.items()
-                if destination in {
-                    key.replace("-", " "),
-                    entity.get_component(ArchivePlaceComponent).name.lower().removeprefix("the "),
-                }
+                if destination in place_aliases({
+                    "key": key, "name": entity.get_component(ArchivePlaceComponent).name,
+                })
             ]
             if len(matches) != 1:
+                names = ", ".join(place["name"] for place in available_destinations(public))
+                next_step = f"From here you can go to {names}." if names else "There is nowhere else to go."
                 outcome = NarrationOutcome(
                     action="move", accepted=False,
-                    detail="Unknown location." if not matches else "Ambiguous location.",
+                    detail=f"I couldn't identify a destination. {next_step}",
                 )
             else:
                 target = matches[0]
@@ -317,7 +339,9 @@ class DemoGame:
             return self.packet(NarrationPacket(
                 view=build_packet(self.actor.world, self.character).view,
                 outcome=NarrationOutcome(action=resolved.command_type or "",
-                                         accepted=False, detail=resolved.reason),
+                                         accepted=False, detail=_action_feedback(
+                                             resolved.command_type or "", resolved.reason, public,
+                                         )),
             ), narrate=True, player_text=original_text)
         ctx = HandlerContext(world=self.actor.world, epoch=self.actor.epoch)
         result = perform(
@@ -331,6 +355,12 @@ class DemoGame:
             action=resolved.command_type or "",
         )
         interview_outcome = narration_packet.outcome
+        if interview_outcome is not None and not interview_outcome.accepted:
+            narration_packet = narration_packet.model_copy(update={
+                "outcome": interview_outcome.model_copy(update={"detail": _action_feedback(
+                    interview_outcome.action, interview_outcome.detail, public,
+                )}),
+            })
         if resolved.command_type == "talk-to-witness":
             self._active_witness = (
                 resolved.target_key

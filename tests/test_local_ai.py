@@ -81,7 +81,7 @@ def test_demo_uses_model_proposal_but_engine_remains_authoritative(
 
     monkeypatch.setattr(LocalAI, "_ask", responder)
     game = DemoGame(ai=ai)
-    response = game.act("Please ask that fellow Quill what he saw")
+    response = game.act("I would like a word with the person by the doorway")
     assert response["outcome"]["accepted"] is True
     assert len(response["view"]["heard"]) == 1
     assert response["narration"] == ("You listen as Porter Quill gives their account. "
@@ -106,7 +106,8 @@ def test_model_unavailable_falls_back_without_mutation(
     packet = game.act("Some totally unknown request")
     assert packet["outcome"]["accepted"] is False
     assert packet["view"]["discovered"] == []
-    assert packet["narration"] == "That action cannot be completed."
+    assert "narration" not in packet
+    assert "Try" in packet["outcome"]["detail"]
 
 
 @pytest.mark.parametrize(("origin", "expected"), [

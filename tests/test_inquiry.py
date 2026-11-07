@@ -258,3 +258,101 @@ def test_negated_accusation_not_interpreted_as_action() -> None:
     assert conversational_command(
         "I don't want to accuse Ada", game._ai_options(),
     ) is None
+
+
+@pytest.mark.parametrize("use_ai", [False, True])
+def test_november_playtest_commands_resolve_deterministically(
+    use_ai: bool, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def model(_self: LocalAI, _system: str, payload: dict[str, Any]) -> dict[str, str]:
+        assert "choices" not in payload, "clear command reached model intent inference"
+        return {"tone": "neutral"}
+
+    monkeypatch.setattr(LocalAI, "_ask", model)
+    game = DemoGame(ai=LocalAI(model="mock") if use_ai else None)
+    before = game.packet()["view"]
+    for command in ("I'll examine the room I'm in.", "Where can I go from here?",
+                    "I want to leave the study.", "Where does the study connect to?"):
+        result = game.act(command)
+        assert result["outcome"]["action"] == "inquire"
+        assert result["view"] == before
+    for command in ("Let's examine the paperwork on the desk.", "I want to examine the receipt."):
+        assert game.act(command)["view"]["discovered"][0]["evidence_key"] == "receipt"
+
+    result = game.act("I want to go into the hallway.")
+    assert result["view"]["place_key"] == "hall"
+    for command in ("Look around the hall.", "Examine the hallway"):
+        result = game.act(command)
+        assert "Glove" in result["outcome"]["detail"]
+        assert len(result["view"]["discovered"]) == 1
+    assert game.act("Go back to the study")["view"]["place_key"] == "study"
+    game.act("go to hall")
+    game.act("examine glove")
+    for command in ("I think Mr Halloran is the culprit", "Ada Vance stole the seal"):
+        result = game.act(command)
+        assert result["outcome"]["action"] == "inquire"
+        assert not result["view"]["solved"]
+    bare = game.act("J'accuse!")
+    assert not bare["outcome"]["accepted"]
+    assert "listed suspects" in bare["outcome"]["detail"]
+    assert game.act("J’accuse Ada Vance!")["view"]["solved"]
+
+
+@pytest.mark.parametrize("command", [
+    "Don't J'accuse Ada", "Maybe J’accuse Ada", "J'accuse Ada and Halloran",
+    "I accuse Porter Quill of working for Ada",
+])
+def test_formal_accusation_cannot_pick_a_different_target(command: str) -> None:
+    result = DemoGame().act(command)
+    assert not result["outcome"]["accepted"]
+    assert result["outcome"]["verdict"] is None
+
+
+def test_formal_accusation_accepts_unique_surname() -> None:
+    result = DemoGame().act("accuse Vance")
+    assert result["outcome"]["verdict"] == "unproven"
+
+
+@pytest.mark.parametrize("use_ai", [False, True])
+def test_november_followups_use_public_context(
+    use_ai: bool, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def model(_self: LocalAI, _system: str, payload: dict[str, Any]) -> dict[str, str]:
+        assert "choices" not in payload
+        return {"tone": "neutral", "text": "Invented reply"}
+
+    monkeypatch.setattr(LocalAI, "_ask", model)
+    game = DemoGame(ai=LocalAI(model="mock") if use_ai else None)
+    before = game.act("I ask Quill what he knows about the seal.")
+    for command, expected in (
+        ("I ask Quill what he heard Ada say to Halloran in response.", "what was said in reply"),
+        ("I compliment the Porter on his waistcoat.", "compliments have no authored response"),
+        ("Is there anything else in the study?", "Receipt"),
+        ("What can I examine here?", "Receipt"),
+    ):
+        result = game.act(command)
+        assert result["outcome"]["action"] == "inquire"
+        assert result["outcome"]["accepted"]
+        assert expected in result["outcome"]["detail"]
+        assert result["outcome"]["statements"] == []
+        assert result["view"] == before["view"]
+        assert result["conversation"] == before["conversation"]
+        assert "Invented reply" not in str(result)
+
+    for command, expected in (
+        ("I want to inspect the glove.", "Here you can examine Receipt"),
+        ("talk to maid", "Here you can question Porter Quill"),
+        ("go to the side door", "From here you can go to The Hall"),
+    ):
+        result = game.act(command)
+        assert not result["outcome"]["accepted"]
+        assert expected in result["outcome"]["detail"]
+        assert result["view"] == before["view"]
+        assert "narration" not in result
+
+    game.act("go to hall")
+    heard = game.act("Let's talk to Maid Rosalind")
+    followup = game.act("Did Rosalind hear or see anything else?")
+    assert followup["outcome"]["action"] == "inquire"
+    assert "does not address that topic" in followup["outcome"]["detail"]
+    assert followup["view"] == heard["view"]

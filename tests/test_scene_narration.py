@@ -53,7 +53,8 @@ def test_denied_action_never_receives_misleading_scene_beat() -> None:
     game = DemoGame()
     result = game.act("examine glove")
     assert result["outcome"]["accepted"] is False
-    assert result["narration"] == "That action cannot be completed."
+    assert "narration" not in result
+    assert "cannot reach" in result["outcome"]["detail"]
 
 
 def test_unknown_action_narration_uses_reviewed_fallback() -> None:

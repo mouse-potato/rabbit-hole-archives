@@ -52,7 +52,7 @@ async function act(text) {
   busy = true;
   $("command").disabled = true;
   $("act-button").disabled = true;
-  $("scene").querySelectorAll("button").forEach(button => { button.disabled = true; });
+  $("action-options").querySelectorAll("button").forEach(button => { button.disabled = true; });
   entry("You: " + text);
   try {
     const packet = await request("/api/investigation/actions", {
@@ -66,71 +66,80 @@ async function act(text) {
     announceResult("Unable to act: " + error.message);
   } finally {
     busy = false;
-    const closed = Boolean($("scene").querySelector(".success"));
+    const closingMessage = $("scene").querySelector(".success");
+    const closed = Boolean(closingMessage);
     $("command").disabled = closed;
     $("act-button").disabled = closed;
-    if (!closed) $("command").focus();
+    $("action-options").querySelectorAll("button").forEach(button => { button.disabled = closed; });
+    if (closingMessage) closingMessage.focus();
+    else $("command").focus();
   }
 }
 function actions(title, items, verb, parent, currentKey = "") {
-  if (!items?.length) return;
-  element("h4", title, parent);
+  const available = items.filter(option => option.key !== currentKey);
+  if (!available.length) return;
+  const group = document.createElement("div");
+  group.className = "action-group";
+  element("h4", title, group);
   const list = document.createElement("ul");
   list.className = "action-list";
-  parent.append(list);
-  for (const option of items) {
-    if (verb === "go to" && option.key === currentKey) continue;
+  group.append(list);
+  parent.append(group);
+  for (const option of available) {
     const li = document.createElement("li");
     const button = element("button", option.name, li);
     button.type = "button";
+    button.setAttribute("aria-label", verb + " " + option.name);
     button.disabled = busy;
     button.addEventListener("click", () => act(verb + " " + option.key));
     list.append(li);
   }
-  if (!list.children.length) list.remove();
 }
 function renderPacket(packet) {
   if (!packet?.view) throw Error("Invalid investigation response.");
   const view = packet.view;
   caseTitle = view.case_title || caseTitle;
   const scene = $("scene");
+  const sceneDetailsOpen = scene.querySelector("details")?.open ?? false;
   scene.replaceChildren();
-  element("p", "CASE FILE / " + view.case_title, scene).className = "eyebrow";
   element("h3", view.place_name || "Unknown location", scene);
-  const description = packet.scene_description || "You survey the room.";
-  element("p", description, scene);
+  const sceneDetails = document.createElement("details");
+  sceneDetails.className = "scene-presence";
+  sceneDetails.open = sceneDetailsOpen;
+  element("summary", "Room description and witnesses", sceneDetails);
+  element("p", packet.scene_description || "You survey the room.", sceneDetails)
+    .className = "room-description";
   const visibleWitnesses = view.witnesses || [];
-  if (visibleWitnesses.length) {
-    const present = document.createElement("section");
-    present.className = "scene-presence";
-    element("h4", "People here", present);
-    for (const witness of visibleWitnesses) {
-      const entry = document.createElement("div");
-      entry.className = "scene-person";
-      element("p", witness.name, entry).className = "scene-person-name";
-      const appearance = packet.witness_descriptions?.[witness.witness_key];
-      if (appearance) element("p", appearance, entry);
-      present.append(entry);
-    }
-    scene.append(present);
+  for (const witness of visibleWitnesses) {
+    const person = document.createElement("div");
+    person.className = "scene-person";
+    element("p", witness.name, person).className = "scene-person-name";
+    const appearance = packet.witness_descriptions?.[witness.witness_key];
+    if (appearance) element("p", appearance, person);
+    sceneDetails.append(person);
   }
+  scene.append(sceneDetails);
   const options = packet.options || {};
   if (view.solved) {
-    element("p", "Case closed. You have assembled enough evidence to support your accusation.", scene).className = "success";
+    const closingMessage = element("p", "Case closed. You have assembled enough evidence to support your accusation.", scene);
+    closingMessage.className = "success";
+    closingMessage.tabIndex = -1;
     if (!solvedAnnounced) {
       entry("Case closed. The evidence supports your conclusion.");
       solvedAnnounced = true;
     }
-  } else {
-    element("p", "Examine the scene, interview the witnesses, and find enough evidence to support your theory.", scene).className = "hint";
   }
+  const palette = $("action-palette");
+  const actionOptions = $("action-options");
+  actionOptions.replaceChildren();
+  palette.hidden = Boolean(view.solved);
   if (!view.solved) {
-    actions("Travel", options.places || [], "go to", scene, view.place_key);
-    actions("Examine", options.evidence || [], "examine", scene);
-    actions("Interview", (view.witnesses || []).map(w => ({
+    actions("Travel", options.places || [], "go to", actionOptions, view.place_key);
+    actions("Examine", options.evidence || [], "examine", actionOptions);
+    actions("Interview", visibleWitnesses.map(w => ({
       key: w.witness_key, name: w.name
-    })), "talk to", scene);
-    actions("Make an accusation", options.suspects || [], "accuse", scene);
+    })), "talk to", actionOptions);
+    actions("Make an accusation", options.suspects || [], "accuse", actionOptions);
   }
   $("command").disabled = Boolean(view.solved);
   $("act-button").disabled = Boolean(view.solved);
@@ -164,8 +173,9 @@ function renderPacket(packet) {
     }
     const outcome = packet.outcome;
     const result = [
-      outcome.accepted ? "Action accepted" : "Action not completed",
-      outcome.detail,
+      outcome.accepted && outcome.action === "inquire" ? "Narrator: " + outcome.detail :
+        [outcome.accepted ? "Action accepted" : "Action not completed", outcome.detail]
+          .filter(Boolean).join("\n"),
       outcome.observation,
       ...(outcome.statements || []),
       outcome.verdict === "solved" ? "Accusation supported." :
@@ -180,8 +190,7 @@ async function connect() {
   try {
     const packet = await request("/api/investigation");
     renderPacket(packet);
-    say($("status"), "Investigation ready. " +
-      (packet.ai_enabled ? "Local AI interpretation enabled." : "Deterministic offline mode."));
+    say($("status"), packet.ai_enabled ? "Ollama enabled." : "Offline mode.");
   } catch (error) {
     say($("status"), "Unable to open investigation: " + error.message);
   } finally {

@@ -13,7 +13,10 @@ Open **http://127.0.0.1:8000/** in your browser. The investigation opens automat
 
 A treasured seal is missing. Explore the **Study** and **Hall**, interview Porter Quill and Maid Rosalind, and examine the receipt and discarded glove. Halloran looks suspicious, but an accusation only succeeds when you identify the culprit **and** have recorded both supporting clues.
 
-You can use the accessible action buttons or type commands:
+Type a command or open **Available actions** to use the action buttons.
+**Room description and witnesses** expands the current scene details.
+
+Example commands:
 
 - `talk to porter`
 - `examine receipt`
