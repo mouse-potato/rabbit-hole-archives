@@ -106,7 +106,8 @@ def test_model_unavailable_falls_back_without_mutation(
     packet = game.act("Some totally unknown request")
     assert packet["outcome"]["accepted"] is False
     assert packet["view"]["discovered"] == []
-    assert packet["narration"] == "That action cannot be completed."
+    assert "narration" not in packet
+    assert "Try" in packet["outcome"]["detail"]
 
 
 @pytest.mark.parametrize(("origin", "expected"), [

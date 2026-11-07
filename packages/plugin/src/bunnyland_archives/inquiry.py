@@ -210,7 +210,7 @@ def testimony_inquiry(text: str, view: dict[str, Any]) -> str | None:
     normalized = _clean(text)
     if not (
         re.match(r"^(?:what|did|does|has|had|who|how)\b", normalized)
-        and re.search(r"\b(?:know|say|said|heard|hear|tell|mention)\b", normalized)
+        and re.search(r"\b(?:know|say|said|heard|hear|see|saw|tell|mention)\b", normalized)
     ):
         return None
 
@@ -238,6 +238,8 @@ def testimony_inquiry(text: str, view: dict[str, Any]) -> str | None:
     if not statements:
         return "You have not recorded any testimony from that witness yet."
 
+    if re.search(r"\b(?:anything else|something else|more details)\b", normalized):
+        return "Your recorded testimony from that witness does not address that topic. Try asking them about a specific lead."
     topics = set(normalized.split()) - _TOPIC_STOPWORDS
     for alias in names[witness_key]:
         topics.difference_update(alias.split())
@@ -295,6 +297,21 @@ def inquiry(text: str, packet: dict[str, Any]) -> str | None:
                 return f"You are in {current_name}. Visit {place['name']} to look around there."
             scene_inspection = True
 
+    if re.match(r"^compliment\b", command):
+        return "You can question witnesses about the case. Social exchanges like compliments have no authored response."
+
+    # A request for someone else's exact reply is different from asking about
+    # a topic. Shared names alone cannot establish what that person said.
+    if re.match(r"^ask .+ what (?:he|she|they) heard .+ say\b", command):
+        return (
+            "Your recorded testimony does not establish what was said in reply. "
+            "You can ask the witness about a specific topic or review your casebook."
+        )
+
+    if re.fullmatch(r"what (?:can|could) (?:i|we) (?:examine|inspect|look at)(?: (?:here|in this room))?", normalized):
+        names = ", ".join(item["name"] for item in options.get("evidence", []))
+        return f"You can examine {names} here." if names else "There is nothing available to examine here."
+
     # A polite request containing an executable verb is still an action.
     # In particular, do not steal "could you ask Quill" or
     # "can I go to the hall" from the existing AI interpreter.
@@ -337,7 +354,7 @@ def inquiry(text: str, packet: dict[str, Any]) -> str | None:
 
     scene_question = (
         scene_inspection or normalized in {"look around", "describe the room", "describe the scene", "where am i"}
-        or bool(re.match(r"^(?:what|what's|what is|describe|tell me about)\b", normalized))
+        or bool(re.match(r"^(?:what|what's|what is|describe|tell me about|is there anything else)\b", normalized))
         and bool(re.search(r"\b(?:here|room|scene|surroundings|around me|study|hall|hallway)\b", normalized))
     )
     # Descriptions may answer only for people visible in the current packet.
@@ -355,6 +372,10 @@ def inquiry(text: str, packet: dict[str, Any]) -> str | None:
                 description = packet.get("witness_descriptions", {}).get(key)
                 if description:
                     return str(description)
+
+    remembered = testimony_inquiry(text, view)
+    if remembered is not None:
+        return remembered
 
     if scene_question:
         other = "hall" if current == "study" else "study"
@@ -379,10 +400,6 @@ def inquiry(text: str, packet: dict[str, Any]) -> str | None:
         summary = [f"{item['label']}: {item['observation']}" for item in discovered]
         summary.extend(str(item["statement"]) for item in heard)
         return "Your casebook records: " + " ".join(summary)
-
-    remembered = testimony_inquiry(text, view)
-    if remembered is not None:
-        return remembered
 
     if re.match(r"^(?:where|what)\b", normalized) and re.search(
         r"\b(?:am i|room am i|location|right now)\b", normalized

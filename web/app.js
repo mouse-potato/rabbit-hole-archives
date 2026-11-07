@@ -164,8 +164,9 @@ function renderPacket(packet) {
     }
     const outcome = packet.outcome;
     const result = [
-      outcome.accepted ? "Action accepted" : "Action not completed",
-      outcome.detail,
+      outcome.accepted && outcome.action === "inquire" ? "Narrator: " + outcome.detail :
+        [outcome.accepted ? "Action accepted" : "Action not completed", outcome.detail]
+          .filter(Boolean).join("\n"),
       outcome.observation,
       ...(outcome.statements || []),
       outcome.verdict === "solved" ? "Accusation supported." :
