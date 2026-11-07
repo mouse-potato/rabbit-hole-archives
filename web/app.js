@@ -95,12 +95,21 @@ function actions(title, items, verb, parent, currentKey = "") {
     list.append(li);
   }
 }
+function casebookEntry(parent, collapsedKeys, key, label) {
+  const entry = document.createElement("details");
+  entry.className = "casebook-entry";
+  entry.dataset.key = key;
+  entry.open = !collapsedKeys.has(key);
+  element("summary", label, entry);
+  parent.append(entry);
+  return entry;
+}
 function renderPacket(packet) {
   if (!packet?.view) throw Error("Invalid investigation response.");
   const view = packet.view;
   caseTitle = view.case_title || caseTitle;
   const scene = $("scene");
-  const sceneDetailsOpen = scene.querySelector("details")?.open ?? false;
+  const sceneDetailsOpen = scene.querySelector("details")?.open ?? true;
   scene.replaceChildren();
   element("h3", view.place_name || "Unknown location", scene);
   const sceneDetails = document.createElement("details");
@@ -145,27 +154,33 @@ function renderPacket(packet) {
   $("act-button").disabled = Boolean(view.solved);
 
   const book = $("casebook");
+  const collapsedKeys = new Set(
+    Array.from(book.querySelectorAll(".casebook-entry:not([open])"), entry => entry.dataset.key)
+  );
   book.replaceChildren();
   element("h3", "Evidence", book);
   if (!view.discovered?.length) element("p", "Nothing recorded yet.", book);
   for (const clue of view.discovered || []) {
-    const section = document.createElement("section");
-    section.className = "casebook-entry";
-    element("h4", clue.label, section);
-    element("p", clue.observation, section);
-    book.append(section);
+    const entry = casebookEntry(book, collapsedKeys, "evidence:" + clue.evidence_key, clue.label);
+    element("p", clue.observation, entry);
   }
   element("h3", "Witness statements", book);
   if (!view.heard?.length) element("p", "No interviews recorded yet.", book);
+  const statementCounts = new Map();
+  const identicalStatements = new Map();
   for (const statement of view.heard || []) {
-    const section = document.createElement("section");
-    section.className = "casebook-entry";
-    element("h4", statement.witness_key.replaceAll("-", " "), section);
-    element("p", "“" + statement.statement + "”", section);
+    const witness = statement.witness_key;
+    const count = (statementCounts.get(witness) || 0) + 1;
+    statementCounts.set(witness, count);
+    const label = witness.replaceAll("-", " ") + " · Statement " + count;
+    const signature = JSON.stringify([witness, statement.statement, statement.lead_evidence_key]);
+    const occurrence = (identicalStatements.get(signature) || 0) + 1;
+    identicalStatements.set(signature, occurrence);
+    const entry = casebookEntry(book, collapsedKeys, signature + ":" + occurrence, label);
+    element("p", "“" + statement.statement + "”", entry);
     if (statement.lead_evidence_key) {
-      element("p", "Lead: " + statement.lead_evidence_key.replaceAll("-", " "), section).className = "hint";
+      element("p", "Lead: " + statement.lead_evidence_key.replaceAll("-", " "), entry).className = "hint";
     }
-    book.append(section);
   }
   if (packet.outcome) {
     if (typeof packet.narration === "string" && packet.narration) {
