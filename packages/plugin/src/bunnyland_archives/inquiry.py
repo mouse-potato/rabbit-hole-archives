@@ -173,8 +173,13 @@ def conversational_command(text: str, options: dict[str, Any]) -> str | None:
         return f"accuse {suspects[0]}" if len(suspects) == 1 else None
     if is_accusation(text):
         return None
-    if not re.search(r"\b(?:talk to|speak to|interview|ask|question)\b", normalized):
+    interview = re.search(r"\b(?:talk to|speak to|interview|ask|question) (.+)", normalized)
+    if interview is None:
         return None
+    addressee = re.split(
+        r"\b(?:about|regarding|concerning|what|why|when|how|whether)\b",
+        interview[1], maxsplit=1,
+    )[0]
     matched: list[str] = []
     for item in options.get("witnesses", []):
         key = str(item["key"])
@@ -183,7 +188,7 @@ def conversational_command(text: str, options: dict[str, Any]) -> str | None:
             # "Porter Quill" may be addressed as either "Porter" or "Quill".
             aliases = {name}
             aliases.update(name.split())
-            if any(re.search(r"\b" + re.escape(alias) + r"\b", normalized) for alias in aliases):
+            if any(re.search(r"\b" + re.escape(alias) + r"\b", addressee) for alias in aliases):
                 matched.append(key)
                 break
     if len(matched) == 1:

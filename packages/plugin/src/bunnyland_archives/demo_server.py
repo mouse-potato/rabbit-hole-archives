@@ -272,7 +272,10 @@ class DemoGame:
         # Preserve the existing reliable parser, especially button commands.
         # Only ask the model when deterministic parsing cannot resolve intent.
         command = action_text(text)
-        if command.startswith(("examine ", "inspect ", "look at ", "study ")):
+        if command.startswith((
+            "examine ", "inspect ", "look at ", "study ",
+            "ask ", "question ", "talk to ", "talk with ", "interview ", "speak to ",
+        )):
             text = command
         destination = movement_target(text)
         if (
