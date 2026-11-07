@@ -53,7 +53,8 @@ button:disabled { opacity: .6; cursor: wait; }
 .hint { color: #d7bbdf; }
 .success { border-left: 3px solid #d9bd8b; padding-left: .8rem; }
 .casebook-entry { border: 0; border-left: 2px solid #806b91; border-radius: 0; background: #292135; padding: .25rem .8rem; margin: .5rem 0 1rem; }
-.casebook-entry h4 { text-transform: capitalize; }
+.casebook-entry summary { text-transform: capitalize; }
+.casebook-entry p { margin: .35rem 0; }
 .transcript-heading { display: flex; align-items: center; justify-content: space-between; gap: .35rem .75rem; flex-wrap: wrap; }
 .transcript-heading h3 { margin: .2rem 0; }
 .transcript-controls { display: flex; gap: .5rem; flex-wrap: wrap; }
